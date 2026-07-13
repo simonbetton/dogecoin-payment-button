@@ -1,0 +1,90 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "dogecoin-send-web",
+  "homepage": "https://github.com/simonbetton/dogecoin-send-web",
+  "items": [
+    {
+      "name": "dogecoin-payment-button",
+      "type": "registry:block",
+      "title": "Dogecoin Payment Button",
+      "description": "A Button that opens a Send me Dogecoin dialog with BIP44 address discovery, optional mempool payment detection, QR code, and copy support. Prefer resolving the account xpub on the server.",
+      "author": "Simon Betton",
+      "dependencies": [
+        "@scure/bip32",
+        "@noble/hashes",
+        "@scure/base",
+        "uqr",
+        "lucide-react"
+      ],
+      "registryDependencies": ["button", "dialog"],
+      "files": [
+        {
+          "path": "registry/default/dogecoin-payment-button/dogecoin-payment-button.tsx",
+          "type": "registry:component",
+          "target": "components/dogecoin-payment-button/dogecoin-payment-button.tsx"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/dogecoin.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/dogecoin.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/address-selection.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/address-selection.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/blockcypher.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/blockcypher.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/mempool-watch.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/mempool-watch.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/payment-uri.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/payment-uri.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/resolve-address.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/resolve-address.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/payment-button-types.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/payment-button-types.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/payment-button-parts.tsx",
+          "type": "registry:component",
+          "target": "components/dogecoin-payment-button/payment-button-parts.tsx"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/use-payment-button-state.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/use-payment-button-state.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/watch-status.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/watch-status.ts"
+        },
+        {
+          "path": "registry/default/dogecoin-payment-button/index.ts",
+          "type": "registry:lib",
+          "target": "components/dogecoin-payment-button/index.ts"
+        }
+      ],
+      "envVars": {
+        "DOGECOIN_XPUB": "",
+        "ONLYDOGE_API_TOKEN": "",
+        "ONLYDOGE_API_BASE_URL": "https://platform.onlydoge.io"
+      },
+      "docs": "Set DOGECOIN_XPUB to a dedicated Dogecoin BIP44 account public key at m/44'/3'/0' (dgub or xpub). Prefer resolving addresses in a Server Action and passing only the address (or a resolver) to the client. Browser-side xpub derivation exposes the full account receive chain to visitors. For optional mempool watching, keep ONLYDOGE_API_TOKEN server-side and proxy SSE through a same-origin route; pass mempoolWatch.endpoint to the button."
+    }
+  ]
+}
