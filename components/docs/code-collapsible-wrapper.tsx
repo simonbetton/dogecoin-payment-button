@@ -20,15 +20,18 @@ export const CodeCollapsibleWrapper = ({
 
   return (
     <Collapsible
-      className={cn("group/collapsible relative md:-mx-1", className)}
+      className={cn(
+        "group/collapsible relative md:-mx-1 [&_[data-rehype-pretty-code-title]]:pr-28",
+        className
+      )}
       onOpenChange={setIsOpened}
       open={isOpened}
     >
-      <div className="flex h-10 items-center justify-end rounded-t-xl bg-code px-2 sm:absolute sm:top-1.5 sm:right-9 sm:z-10 sm:h-auto sm:rounded-none sm:bg-transparent sm:p-0">
+      <div className="absolute top-1.5 right-9 z-10 flex items-center">
         <CollapsibleTrigger
           render={
             <Button
-              className="h-7 rounded-md px-2 text-muted-foreground"
+              className="h-7 rounded-md pr-2 pl-3 text-muted-foreground"
               size="sm"
               variant="ghost"
             />
@@ -37,13 +40,13 @@ export const CodeCollapsibleWrapper = ({
           {isOpened ? "Collapse" : "Expand"}
         </CollapsibleTrigger>
         <Separator
-          className="mx-1.5! hidden h-4 sm:block"
+          className="mx-1.5! h-4 self-center!"
           orientation="vertical"
         />
       </div>
       <div
         className={cn(
-          "relative overflow-hidden [&>figure]:mt-0 [&>figure]:rounded-t-none! sm:[&>figure]:rounded-t-xl! [&>figure]:md:mx-0!",
+          "relative overflow-hidden [&>figure]:mt-0 [&>figure]:md:mx-0!",
           !isOpened && "max-h-64"
         )}
       >

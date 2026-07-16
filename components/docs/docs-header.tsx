@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DocsToc } from "@/components/docs/docs-toc";
 import { GitHubLink } from "@/components/github-link";
 import { ModeSwitcher } from "@/components/mode-switcher";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { DOC_SECTIONS } from "@/lib/docs";
 
@@ -49,17 +50,20 @@ export const DocsHeader = () => (
       </div>
     </div>
     <nav aria-label="Page sections" className="border-t lg:hidden">
-      <div className="flex gap-3 overflow-x-auto px-4 py-2 sm:px-6">
-        {DOC_SECTIONS.map((section) => (
-          <Link
-            className={sectionLinkClassName}
-            href={section.href}
-            key={section.id}
-          >
-            {section.label}
-          </Link>
-        ))}
-      </div>
+      <ScrollArea className="w-full">
+        <div className="flex w-max gap-3 px-4 py-2 sm:px-6">
+          {DOC_SECTIONS.map((section) => (
+            <Link
+              className={sectionLinkClassName}
+              href={section.href}
+              key={section.id}
+            >
+              {section.label}
+            </Link>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </nav>
   </header>
 );
@@ -69,8 +73,10 @@ export const DocsSidebar = () => (
     aria-label="Table of contents"
     className="sticky top-14 z-30 col-start-3 hidden h-[calc(100dvh-3.5rem)] w-56 justify-self-end flex-col gap-4 overflow-hidden overscroll-none pb-8 xl:flex"
   >
-    <div className="flex scroll-fade scrollbar-none flex-col gap-8 overflow-y-auto px-4 pt-8">
-      <DocsToc />
-    </div>
+    <ScrollArea className="min-h-0 flex-1 scroll-fade">
+      <div className="flex flex-col gap-8 px-4 pt-8">
+        <DocsToc />
+      </div>
+    </ScrollArea>
   </aside>
 );

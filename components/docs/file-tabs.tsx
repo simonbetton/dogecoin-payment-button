@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { CodeBlockFigure } from "@/components/docs/code-block-figure";
 import { CodeCollapsibleWrapper } from "@/components/docs/code-collapsible-wrapper";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { createTabListKeyDownHandler } from "@/lib/tab-list";
 import { cn } from "@/lib/utils";
 
@@ -100,40 +101,43 @@ export const FileTabs = ({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      <div
-        aria-label="Source files"
-        className="flex gap-1 overflow-x-auto rounded-lg border bg-muted/40 p-1"
-        role="tablist"
-      >
-        {files.map((file) => {
-          const selected = file.filename === active.filename;
-          const label = tabLabels.get(file.filename) ?? file.filename;
-          return (
-            <button
-              aria-controls={toFilePanelId(file.filename)}
-              aria-selected={selected}
-              className={cn(
-                "shrink-0 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                selected
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              id={toFileTabId(file.filename)}
-              key={file.filename}
-              onClick={() => {
-                setValue(file.filename);
-              }}
-              onKeyDown={handleKeyDown}
-              role="tab"
-              tabIndex={selected ? 0 : -1}
-              title={file.filename}
-              type="button"
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <ScrollArea className="w-full rounded-lg border bg-muted/40">
+        <div
+          aria-label="Source files"
+          className="flex w-max min-w-full gap-1 p-1"
+          role="tablist"
+        >
+          {files.map((file) => {
+            const selected = file.filename === active.filename;
+            const label = tabLabels.get(file.filename) ?? file.filename;
+            return (
+              <button
+                aria-controls={toFilePanelId(file.filename)}
+                aria-selected={selected}
+                className={cn(
+                  "shrink-0 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  selected
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                id={toFileTabId(file.filename)}
+                key={file.filename}
+                onClick={() => {
+                  setValue(file.filename);
+                }}
+                onKeyDown={handleKeyDown}
+                role="tab"
+                tabIndex={selected ? 0 : -1}
+                title={file.filename}
+                type="button"
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
       <div
         aria-labelledby={toFileTabId(active.filename)}
         id={toFilePanelId(active.filename)}
