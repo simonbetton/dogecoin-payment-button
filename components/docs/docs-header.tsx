@@ -4,7 +4,7 @@ import Link from "next/link";
 import { DocsToc } from "@/components/docs/docs-toc";
 import { GitHubLink } from "@/components/github-link";
 import { ModeSwitcher } from "@/components/mode-switcher";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { DOC_SECTIONS } from "@/lib/docs";
 
@@ -62,7 +62,6 @@ export const DocsHeader = () => (
             </Link>
           ))}
         </div>
-        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </nav>
   </header>

@@ -1,6 +1,6 @@
 import { CopyButton } from "@/components/docs/copy-button";
 import { LanguageIcon } from "@/components/docs/language-icon";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface CodeBlockFigureProps {
@@ -65,7 +65,6 @@ export const CodeBlockFigure = ({
           </code>
         </pre>
       )}
-      <ScrollBar orientation="horizontal" />
     </ScrollArea>
   </figure>
 );

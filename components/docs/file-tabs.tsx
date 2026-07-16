@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { CodeBlockFigure } from "@/components/docs/code-block-figure";
 import { CodeCollapsibleWrapper } from "@/components/docs/code-collapsible-wrapper";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { createTabListKeyDownHandler } from "@/lib/tab-list";
 import { cn } from "@/lib/utils";
 
@@ -136,7 +136,6 @@ export const FileTabs = ({
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" />
       </ScrollArea>
       <div
         aria-labelledby={toFileTabId(active.filename)}
