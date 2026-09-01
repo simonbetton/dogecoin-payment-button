@@ -55,6 +55,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --animate-mempool-success: mempool-success 220ms var(--ease-out-strong) both;
+  --animate-mempool-failure: mempool-failure 260ms var(--ease-out-strong) both;
+  --animate-mempool-icon: mempool-icon 160ms var(--ease-out-strong) both;
 }
 
 :root {
@@ -229,5 +233,85 @@
   [data-highlighted-chars] {
     position: relative;
     background-color: var(--color-code-highlight);
+  }
+}
+
+@keyframes mempool-success {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes mempool-failure {
+  0% {
+    opacity: 0;
+    transform: scale(0.97) translateX(0);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+  55% {
+    transform: translateX(-4px);
+  }
+  70% {
+    transform: translateX(4px);
+  }
+  85% {
+    transform: translateX(-2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes mempool-icon {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes mempool-success {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes mempool-failure {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes mempool-icon {
+    from {
+      opacity: 0;
+      transform: none;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }

@@ -47,7 +47,7 @@ export const CodeBlockFigure = ({
           data-not-typeset=""
         />
       ) : (
-        <pre className="min-w-max !bg-transparent px-4 py-3.5 outline-none">
+        <pre className="min-w-max !bg-transparent py-3.5 pr-12 pl-4 outline-none">
           <code data-line-numbers="">
             {(() => {
               const occurrenceByLine = new Map<string, number>();

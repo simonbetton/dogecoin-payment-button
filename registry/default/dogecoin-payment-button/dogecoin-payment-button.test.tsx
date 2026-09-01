@@ -194,6 +194,7 @@ describe(DogecoinPaymentButton, () => {
       within(dialog).findByText(/Payment detected in the mempool/u)
     ).resolves.toBeInTheDocument();
     expect(within(dialog).getByText(/txid: txid-123/u)).toBeInTheDocument();
+    expect(dialog.querySelector("[data-watch-status='appeared']")).toBeTruthy();
     expect(onPaymentAppeared).toHaveBeenCalledExactlyOnceWith(appeared);
     expect(fetchImpl).toHaveBeenCalledWith(
       `/api/dogecoin/mempool/watch?address=${ADDRESS}&minValueBase=1000000000`,
@@ -231,6 +232,7 @@ describe(DogecoinPaymentButton, () => {
         /No matching payment appeared within 5 minutes/u
       )
     ).resolves.toBeInTheDocument();
+    expect(dialog.querySelector("[data-watch-status='timeout']")).toBeTruthy();
 
     const callsBeforeRetry = fetchImpl.mock.calls.length;
 
@@ -272,6 +274,7 @@ describe(DogecoinPaymentButton, () => {
         /Another mempool watch session is already open/u
       )
     ).resolves.toBeInTheDocument();
+    expect(dialog.querySelector("[data-watch-status='busy']")).toBeTruthy();
   });
 
   it("closes the watch when the dialog closes", async () => {
