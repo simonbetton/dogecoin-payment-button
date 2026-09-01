@@ -101,7 +101,7 @@ export const FileTabs = ({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      <ScrollArea className="w-full rounded-lg border bg-muted/40">
+      <ScrollArea className="bg-muted/40 w-full rounded-lg border">
         <div
           aria-label="Source files"
           className="flex w-max min-w-full gap-1 p-1"
@@ -115,7 +115,7 @@ export const FileTabs = ({
                 aria-controls={toFilePanelId(file.filename)}
                 aria-selected={selected}
                 className={cn(
-                  "shrink-0 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "focus-visible:ring-ring/50 shrink-0 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3",
                   selected
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"

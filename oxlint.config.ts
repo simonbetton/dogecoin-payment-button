@@ -18,7 +18,5 @@ export default defineConfig({
     "eslint/no-await-in-loop": "off",
     // Local QR SVG encoder output is trusted.
     "react/no-danger": "off",
-    // Dialog-open resolution intentionally seeds React state from an external async source.
-    "react/react-compiler": "off",
   },
 });

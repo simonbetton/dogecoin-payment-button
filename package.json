@@ -13,6 +13,7 @@
     "typecheck": "tsgo --noEmit",
     "lint": "oxlint .",
     "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "registry:build": "bunx shadcn@latest build",

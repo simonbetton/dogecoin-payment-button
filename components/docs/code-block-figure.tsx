@@ -21,7 +21,7 @@ export const CodeBlockFigure = ({
   <figure className={cn(className)} data-rehype-pretty-code-figure="">
     {filename ? (
       <figcaption
-        className="flex min-w-0 items-center gap-2 pr-12 text-code-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-code-foreground [&_svg]:opacity-70"
+        className="text-code-foreground [&_svg]:text-code-foreground flex min-w-0 items-center gap-2 pr-12 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:opacity-70"
         data-language={language}
         data-rehype-pretty-code-title=""
         title={filename}
@@ -34,7 +34,7 @@ export const CodeBlockFigure = ({
     ) : null}
     <CopyButton
       className={cn(
-        "absolute top-3 right-2 z-10 size-7 bg-code text-code-foreground hover:bg-code hover:opacity-100 focus-visible:opacity-100",
+        "bg-code text-code-foreground hover:bg-code absolute top-3 right-2 z-10 size-7 hover:opacity-100 focus-visible:opacity-100",
         filename && "top-1.5!"
       )}
       value={code}
@@ -47,7 +47,7 @@ export const CodeBlockFigure = ({
           data-not-typeset=""
         />
       ) : (
-        <pre className="min-w-max px-4 py-3.5 outline-none !bg-transparent">
+        <pre className="min-w-max !bg-transparent px-4 py-3.5 outline-none">
           <code data-line-numbers="">
             {(() => {
               const occurrenceByLine = new Map<string, number>();

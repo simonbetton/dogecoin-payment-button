@@ -31,7 +31,7 @@ export const CodeCollapsibleWrapper = ({
         <CollapsibleTrigger
           render={
             <Button
-              className="h-7 rounded-md pr-2 pl-3 text-muted-foreground"
+              className="text-muted-foreground h-7 rounded-md pr-2 pl-3"
               size="sm"
               variant="ghost"
             />
@@ -54,11 +54,11 @@ export const CodeCollapsibleWrapper = ({
       </div>
       <CollapsibleTrigger
         className={cn(
-          "absolute inset-x-0 -bottom-2 flex h-20 p-0 items-center justify-center rounded-b-lg bg-linear-to-b from-transparent via-background/70 to-background text-foreground text-sm",
+          "via-background/70 to-background text-foreground absolute inset-x-0 -bottom-2 flex h-20 items-center justify-center rounded-b-lg bg-linear-to-b from-transparent p-0 text-sm",
           isOpened && "hidden"
         )}
       >
-        <span className="bg-background/90 border border-border px-2 py-1 rounded-lg">
+        <span className="bg-background/90 border-border rounded-lg border px-2 py-1">
           Expand
         </span>
       </CollapsibleTrigger>

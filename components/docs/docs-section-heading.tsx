@@ -28,13 +28,13 @@ export const DocsSectionHeading = ({
     tabIndex={-1}
   >
     <a
-      className="inline rounded-sm text-inherit no-underline outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="focus-visible:ring-ring/50 inline rounded-sm text-inherit no-underline outline-none focus-visible:ring-3"
       href={`#${id}`}
     >
       {children}
       <span
         aria-hidden="true"
-        className="ml-2 inline-block font-normal text-muted-foreground opacity-0 transition-opacity duration-150 motion-reduce:transition-none group-focus-within:opacity-100 group-hover:opacity-100"
+        className="text-muted-foreground ml-2 inline-block font-normal opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none"
       >
         #
       </span>

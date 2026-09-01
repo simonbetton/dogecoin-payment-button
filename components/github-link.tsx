@@ -17,6 +17,8 @@ const GitHubIcon = ({ className }: { className?: string }) => (
 );
 
 const StarsCount = async () => {
+  let formatted: string;
+
   try {
     const response = await fetch(
       `https://api.github.com/repos/${GITHUB_REPO}`,
@@ -40,17 +42,17 @@ const StarsCount = async () => {
     }
 
     const { stargazers_count: count } = data;
-    const formatted =
+    formatted =
       count >= 1000 ? `${Math.round(count / 1000)}k` : count.toLocaleString();
-
-    return (
-      <span className="w-fit text-muted-foreground text-xs tabular-nums">
-        {formatted}
-      </span>
-    );
   } catch {
     return null;
   }
+
+  return (
+    <span className="text-muted-foreground w-fit text-xs tabular-nums">
+      {formatted}
+    </span>
+  );
 };
 
 export const GitHubLink = () => (
@@ -69,7 +71,7 @@ export const GitHubLink = () => (
       fallback={
         <span
           aria-hidden="true"
-          className="inline-block h-4 w-8 animate-pulse rounded bg-muted"
+          className="bg-muted inline-block h-4 w-8 animate-pulse rounded"
         />
       }
     >

@@ -57,7 +57,7 @@ const ModeTabs = ({
   return (
     <div
       aria-label="Installation method"
-      className="flex gap-1 rounded-lg border bg-muted/40 p-1"
+      className="bg-muted/40 flex gap-1 rounded-lg border p-1"
       role="tablist"
     >
       {(
@@ -72,7 +72,7 @@ const ModeTabs = ({
             aria-controls={getModePanelId(tab.value)}
             aria-selected={selected}
             className={cn(
-              "rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "focus-visible:ring-ring/50 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3",
               selected
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -137,8 +137,8 @@ export const InstallationTabs = ({
         >
           <ol className="space-y-6">
             <li className="space-y-3">
-              <p className="font-medium text-sm">
-                <span className="mr-2 text-muted-foreground">1.</span>
+              <p className="text-sm font-medium">
+                <span className="text-muted-foreground mr-2">1.</span>
                 Install the following dependencies:
               </p>
               <PackageManagerTabs
@@ -149,8 +149,8 @@ export const InstallationTabs = ({
             </li>
 
             <li className="space-y-3">
-              <p className="font-medium text-sm">
-                <span className="mr-2 text-muted-foreground">2.</span>
+              <p className="text-sm font-medium">
+                <span className="text-muted-foreground mr-2">2.</span>
                 Add the required shadcn components:
               </p>
               <PackageManagerTabs
@@ -161,33 +161,33 @@ export const InstallationTabs = ({
             </li>
 
             <li className="space-y-3">
-              <p className="font-medium text-sm">
-                <span className="mr-2 text-muted-foreground">3.</span>
+              <p className="text-sm font-medium">
+                <span className="text-muted-foreground mr-2">3.</span>
                 Copy and paste the following code into your project.
               </p>
               <FileTabs collapsible files={sourceFiles} />
             </li>
 
             <li className="space-y-2">
-              <p className="font-medium text-sm">
-                <span className="mr-2 text-muted-foreground">4.</span>
+              <p className="text-sm font-medium">
+                <span className="text-muted-foreground mr-2">4.</span>
                 Update the import paths to match your project setup.
               </p>
               <p className="text-muted-foreground text-sm">
                 Files are intended for{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   components/dogecoin-payment-button/
                 </code>
                 . Keep{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   button
                 </code>{" "}
                 and{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   dialog
                 </code>{" "}
                 imports aligned with your{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   components.json
                 </code>{" "}
                 aliases.

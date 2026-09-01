@@ -134,7 +134,7 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
   return (
     <div className="isolate flex min-h-dvh flex-col">
       <a
-        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg focus:bg-background focus:px-3 focus:py-2 focus:font-medium focus:text-sm focus:shadow-lg focus:ring-3 focus:ring-ring/50"
+        className="focus:bg-background focus:ring-ring/50 sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[100] focus:rounded-lg focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:ring-3"
         href="#main-content"
       >
         Skip to main content
@@ -142,20 +142,20 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
       <DocsHeader />
       <div className="grid flex-1 items-stretch xl:grid-cols-[minmax(0,1fr)_minmax(0,48rem)_minmax(0,1fr)]">
         <main
-          className="mx-auto min-w-0 w-full max-w-3xl space-y-12 px-4 py-8 sm:px-6 lg:py-10 xl:col-start-2"
+          className="mx-auto w-full max-w-3xl min-w-0 space-y-12 px-4 py-8 sm:px-6 lg:py-10 xl:col-start-2"
           id="main-content"
           tabIndex={-1}
         >
           <section aria-labelledby="overview" className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-3">
-                <p className="font-medium text-amber-700 text-sm dark:text-amber-400">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
                   Registry block
                 </p>
                 <DocsSectionHeading as="h1" id="overview">
                   Dogecoin Payment Button
                 </DocsSectionHeading>
-                <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
+                <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
                   Installable shadcn registry block that derives BIP44 Dogecoin
                   payment addresses from an account-level public key, then shows
                   a QR code and copyable address in a dialog. Optionally watches
@@ -181,24 +181,24 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
               The block API and registry URL stay the same. Your project&apos;s
               shadcn base decides whether Base UI or Radix UI primitives are
               installed for{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                 button
               </code>{" "}
               and{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                 dialog
               </code>
               .
             </p>
 
             <div className="overflow-hidden rounded-xl border dark:inset-ring dark:inset-ring-white/5">
-              <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
-                <p className="font-medium text-sm">Preview</p>
+              <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-2">
+                <p className="text-sm font-medium">Preview</p>
                 <p className="text-muted-foreground text-xs">
                   {primitiveBase === "radix" ? "Radix UI" : "Base UI"} · mocked
                 </p>
               </div>
-              <div className="flex min-h-56 items-center justify-center bg-card p-6 sm:p-10">
+              <div className="bg-card flex min-h-56 items-center justify-center p-6 sm:p-10">
                 <div className="w-full max-w-sm space-y-4 text-center">
                   <p className="text-muted-foreground text-sm">
                     Uses a fixed example address and a simulated mempool watch
@@ -214,9 +214,9 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
           <section aria-labelledby="live-demo" className="space-y-4">
             <div className="space-y-2">
               <DocsSectionHeading id="live-demo">Live demo</DocsSectionHeading>
-              <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
+              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
                 Resolves a payment address from{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   DOGECOIN_XPUB
                 </code>{" "}
                 on the server
@@ -227,34 +227,34 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
             </div>
 
             <div className="overflow-hidden rounded-xl border dark:inset-ring dark:inset-ring-white/5">
-              <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
-                <p className="font-medium text-sm">Live demo</p>
+              <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-2">
+                <p className="text-sm font-medium">Live demo</p>
                 <p className="text-muted-foreground text-xs">
                   {setupError ? "Setup required" : "API route"}
                 </p>
               </div>
-              <div className="flex min-h-56 items-center justify-center bg-card p-6 sm:p-10">
+              <div className="bg-card flex min-h-56 items-center justify-center p-6 sm:p-10">
                 {setupError ? (
-                  <div className="w-full max-w-lg space-y-3 rounded-xl border border-dashed bg-muted/30 p-5">
+                  <div className="bg-muted/30 w-full max-w-lg space-y-3 rounded-xl border border-dashed p-5">
                     <h3 className="font-medium">Setup required</h3>
                     <p className="text-destructive text-sm" role="alert">
                       {setupError}
                     </p>
                     <p className="text-muted-foreground text-sm">
                       Create a dedicated Dogecoin account at{" "}
-                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                         m/44&apos;/3&apos;/0&apos;
                       </code>{" "}
                       and set its public key in{" "}
-                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                         DOGECOIN_XPUB
                       </code>
                       . Accepts Dogecoin-native{" "}
-                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                         dgub
                       </code>{" "}
                       or Bitcoin-compatible{" "}
-                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                         xpub
                       </code>
                       .
@@ -286,7 +286,7 @@ ONLYDOGE_API_TOKEN=sk_...`}
               <DocsSectionHeading id="installation">
                 Installation
               </DocsSectionHeading>
-              <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
+              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
                 Add the registry block with the shadcn CLI, or copy the
                 component files manually.
               </p>
@@ -309,7 +309,7 @@ ONLYDOGE_API_TOKEN=sk_...`}
           <section aria-labelledby="usage" className="space-y-4">
             <div className="space-y-2">
               <DocsSectionHeading id="usage">Usage</DocsSectionHeading>
-              <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
+              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
                 Prefer resolving the account public key on the server and
                 passing a resolver into the button.
               </p>
@@ -326,20 +326,20 @@ ONLYDOGE_API_TOKEN=sk_...`}
               <DocsSectionHeading id="integration">
                 Next.js integration
               </DocsSectionHeading>
-              <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
+              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
                 Copy these Next.js files to wire server-side address resolution
                 and the optional OnlyDoge mempool SSE proxy.
               </p>
-              <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
-                <span className="font-semibold text-amber-700 dark:text-amber-400 text-xs">
+              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
                   IMPORTANT:
                 </span>{" "}
                 Keep{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   DOGECOIN_XPUB
                 </code>{" "}
                 and{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   ONLYDOGE_API_TOKEN
                 </code>{" "}
                 on the server.
@@ -351,20 +351,20 @@ ONLYDOGE_API_TOKEN=sk_...`}
           <section aria-labelledby="notes" className="space-y-4">
             <div className="space-y-2">
               <DocsSectionHeading id="notes">Notes</DocsSectionHeading>
-              <p className="max-w-[56ch] text-pretty text-muted-foreground text-sm">
+              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
                 Mempool watching is opt-in. Detection means the payment was seen
                 in the mempool, not that it is confirmed. Use a dedicated
                 account public key at{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
                   m/44&apos;/3&apos;/0&apos;
                 </code>
                 .
               </p>
             </div>
-            <div className="rounded-xl border bg-muted/20 p-4 dark:bg-transparent dark:inset-ring dark:inset-ring-white/5">
+            <div className="bg-muted/20 rounded-xl border p-4 dark:bg-transparent dark:inset-ring dark:inset-ring-white/5">
               <p className="text-sm">
                 Registry URL used by this deployment:{" "}
-                <code className="break-all font-mono text-xs" translate="no">
+                <code className="font-mono text-xs break-all" translate="no">
                   {registryUrl}
                 </code>
               </p>

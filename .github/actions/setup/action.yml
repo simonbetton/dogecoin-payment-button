@@ -1,0 +1,16 @@
+name: Setup
+description: Install Bun and lockfile-exact project dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    # bun ci is bun install --frozen-lockfile: fail if package.json and
+    # bun.lock disagree, so CI never silently drifts from the committed tree.
+    - name: Install dependencies
+      shell: bash
+      run: bun ci

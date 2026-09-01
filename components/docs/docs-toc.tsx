@@ -52,7 +52,7 @@ export const DocsToc = ({ className }: DocsTocProps) => {
       className={cn("flex flex-col gap-2 p-4 pt-0 text-sm", className)}
     >
       <p
-        className="h-6 bg-background font-medium text-muted-foreground text-xs"
+        className="bg-background text-muted-foreground h-6 text-xs font-medium"
         id="on-this-page-heading"
       >
         On This Page
@@ -67,7 +67,7 @@ export const DocsToc = ({ className }: DocsTocProps) => {
             <li key={section.id}>
               <a
                 aria-current={isActive ? "location" : undefined}
-                className="block rounded-sm text-[0.8rem] text-muted-foreground no-underline outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-[active=true]:font-medium data-[active=true]:text-foreground"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 data-[active=true]:text-foreground block rounded-sm text-[0.8rem] no-underline transition-colors outline-none focus-visible:ring-3 data-[active=true]:font-medium"
                 data-active={isActive}
                 href={section.href}
               >

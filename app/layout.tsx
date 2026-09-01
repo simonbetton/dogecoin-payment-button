@@ -75,20 +75,20 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
-  return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${dogeSans.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-background text-foreground">
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
-    </html>
-  );
-}
+}>) => (
+  <html
+    lang="en"
+    suppressHydrationWarning
+    className={`${geistSans.variable} ${geistMono.variable} ${dogeSans.variable} h-full antialiased`}
+  >
+    <body className="bg-background text-foreground flex min-h-full flex-col">
+      <ThemeProvider>{children}</ThemeProvider>
+    </body>
+  </html>
+);
+
+export default RootLayout;

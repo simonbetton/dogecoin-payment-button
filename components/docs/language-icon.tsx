@@ -14,7 +14,7 @@ export const LanguageIcon = ({ language }: LanguageIconProps) => {
       return (
         <svg
           aria-hidden="true"
-          className="size-4 fill-foreground"
+          className="fill-foreground size-4"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -28,7 +28,7 @@ export const LanguageIcon = ({ language }: LanguageIconProps) => {
       return (
         <svg
           aria-hidden="true"
-          className="size-4 fill-foreground"
+          className="fill-foreground size-4"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
