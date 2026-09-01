@@ -44,7 +44,7 @@ export const PackageManagerTabs = ({
     <div className={cn("flex flex-col gap-3", className)}>
       <div
         aria-label="Package manager"
-        className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1"
+        className="bg-muted/40 flex flex-wrap gap-1 rounded-lg border p-1"
         role="tablist"
       >
         {PACKAGE_MANAGERS.map((manager) => {
@@ -54,7 +54,7 @@ export const PackageManagerTabs = ({
               aria-controls={getPackageManagerPanelId(manager)}
               aria-selected={selected}
               className={cn(
-                "rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "focus-visible:ring-ring/50 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3",
                 selected
                   ? "bg-background text-foreground shadow-sm dark:shadow-none"
                   : "text-muted-foreground hover:text-foreground"

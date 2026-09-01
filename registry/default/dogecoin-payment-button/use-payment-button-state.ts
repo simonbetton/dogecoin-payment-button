@@ -425,6 +425,8 @@ export const useMempoolWatch = ({
     open,
     paymentAddress,
     resolutionStatus,
+    // Retry increments session so this effect remounts the watch.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- retry token
     state.session,
   ]);
 

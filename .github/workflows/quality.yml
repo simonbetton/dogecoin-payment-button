@@ -1,0 +1,70 @@
+# Quality gates — typecheck, format, lint, test, and production build.
+# Each job is an independent required check so a format miss does not hide
+# a type error, and reviewers can re-run one gate without waiting on the rest.
+
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancels any in-flight Quality run for the same PR (or branch, on push)
+# the moment a new commit arrives, so only the latest revision is gated.
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      # next-env.d.ts imports generated route types under .next/dev/types.
+      # A clean checkout has none of those files, so typegen must run first.
+      - name: Generate Next.js types
+        run: bun x next typegen
+      - name: Typecheck
+        run: bun run typecheck
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Check formatting
+        run: bun run format:check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Lint
+        run: bun run lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Test
+        run: bun run test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Build
+        run: bun run build

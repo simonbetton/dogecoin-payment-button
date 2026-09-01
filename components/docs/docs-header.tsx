@@ -12,12 +12,12 @@ const sectionLinkClassName =
   "shrink-0 rounded-md bg-muted/50 px-2.5 py-1.5 text-muted-foreground text-sm no-underline outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export const DocsHeader = () => (
-  <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur-sm">
+  <header className="bg-background/90 sticky top-0 z-50 w-full border-b backdrop-blur-sm">
     <div className="flex h-14 w-full items-center gap-4 px-4 sm:px-6">
-      <div className="flex md:flex-1 items-center">
+      <div className="flex items-center md:flex-1">
         <Link
           aria-label="Homepage"
-          className="inline-flex items-center gap-2 rounded-sm font-doge font-semibold text-md tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="font-doge text-md focus-visible:ring-ring/50 inline-flex items-center gap-2 rounded-sm font-semibold tracking-tight outline-none focus-visible:ring-3"
           href="/"
         >
           <Image
@@ -32,7 +32,7 @@ export const DocsHeader = () => (
       </div>
       <div className="flex flex-1 items-center justify-end gap-2">
         <Link
-          className="hidden rounded-sm text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 sm:inline"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 hidden rounded-sm text-sm transition-colors outline-none focus-visible:ring-3 sm:inline"
           href="/r/dogecoin-payment-button.json"
           rel="noopener noreferrer"
           target="_blank"
@@ -41,7 +41,7 @@ export const DocsHeader = () => (
           <span className="sr-only"> (opens in a new tab)</span>
         </Link>
         <Separator
-          className="mx-1 hidden h-4 sm:block self-center!"
+          className="mx-1 hidden h-4 self-center! sm:block"
           orientation="vertical"
         />
         <GitHubLink />
@@ -70,9 +70,9 @@ export const DocsHeader = () => (
 export const DocsSidebar = () => (
   <aside
     aria-label="Table of contents"
-    className="sticky top-14 z-30 col-start-3 hidden h-[calc(100dvh-3.5rem)] w-56 justify-self-end flex-col gap-4 overflow-hidden overscroll-none pb-8 xl:flex"
+    className="sticky top-14 z-30 col-start-3 hidden h-[calc(100dvh-3.5rem)] w-56 flex-col gap-4 justify-self-end overflow-hidden overscroll-none pb-8 xl:flex"
   >
-    <ScrollArea className="min-h-0 flex-1 scroll-fade">
+    <ScrollArea className="scroll-fade min-h-0 flex-1">
       <div className="flex flex-col gap-8 px-4 pt-8">
         <DocsToc />
       </div>

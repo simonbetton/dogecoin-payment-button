@@ -148,7 +148,7 @@ const MempoolWatchBanner = ({
         <div className="space-y-1">
           <p>{message}</p>
           {appearedPayload ? (
-            <p className="break-all font-mono text-xs opacity-80">
+            <p className="font-mono text-xs break-all opacity-80">
               txid: {appearedPayload.txid}
             </p>
           ) : null}
@@ -188,16 +188,16 @@ const PaymentDetails = ({
 }: PaymentDetailsProps) => (
   <>
     {amount ? (
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-center text-sm">
         Suggested amount:{" "}
-        <span className="font-medium text-foreground">{amount} DOGE</span>
+        <span className="text-foreground font-medium">{amount} DOGE</span>
       </p>
     ) : null}
 
     <DogecoinQrCode value={payment.uri} />
 
-    <div className="rounded-lg border bg-muted/40 px-3 py-2">
-      <p className="break-all font-mono text-xs leading-relaxed">
+    <div className="bg-muted/40 rounded-lg border px-3 py-2">
+      <p className="font-mono text-xs leading-relaxed break-all">
         {payment.address}
       </p>
     </div>
@@ -242,14 +242,14 @@ export const PaymentDialogBody = ({
 }: PaymentDialogBodyProps) => (
   <div className="flex flex-col gap-4">
     {status === "loading" ? (
-      <div className="flex min-h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
+      <div className="text-muted-foreground flex min-h-48 flex-col items-center justify-center gap-3">
         <LoaderCircleIcon className="size-6 animate-spin" />
         <p>Finding a payment address…</p>
       </div>
     ) : null}
 
     {status === "error" ? (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+      <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
         <p>{errorMessage ?? "Something went wrong."}</p>
         <Button
           className="mt-3"
