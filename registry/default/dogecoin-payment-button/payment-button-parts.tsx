@@ -1,6 +1,11 @@
 "use client";
 
-import { CheckIcon, CopyIcon, LoaderCircleIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  CopyIcon,
+  LoaderCircleIcon,
+} from "lucide-react";
 import * as React from "react";
 import { renderSVG } from "uqr";
 
@@ -121,29 +126,47 @@ interface MempoolWatchBannerProps {
   status: MempoolWatchStatus;
 }
 
+const isWatchFailure = (status: MempoolWatchStatus): boolean =>
+  status === "timeout" || status === "busy" || status === "error";
+
 const MempoolWatchBanner = ({
   appearedPayload,
   message,
   onRetry,
   status,
 }: MempoolWatchBannerProps) => {
-  const canRetry =
-    status === "timeout" || status === "busy" || status === "error";
+  const canRetry = isWatchFailure(status);
+  const isSuccess = status === "appeared";
 
   return (
     <div
       aria-live="polite"
       className={cn(
-        "rounded-lg border p-3 text-sm",
-        watchStatusClassName(status)
+        "origin-center rounded-lg border p-3 text-sm",
+        watchStatusClassName(status),
+        isSuccess && "animate-mempool-success",
+        canRetry && "animate-mempool-failure"
       )}
+      data-watch-status={status}
     >
       <div className="flex items-start gap-2">
         {status === "watching" ? (
-          <LoaderCircleIcon className="mt-0.5 size-4 shrink-0 animate-spin" />
+          <LoaderCircleIcon
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 animate-spin"
+          />
         ) : null}
-        {status === "appeared" ? (
-          <CheckIcon className="mt-0.5 size-4 shrink-0" />
+        {isSuccess ? (
+          <CheckIcon
+            aria-hidden="true"
+            className="animate-mempool-icon mt-0.5 size-4 shrink-0"
+          />
+        ) : null}
+        {canRetry ? (
+          <CircleAlertIcon
+            aria-hidden="true"
+            className="animate-mempool-icon mt-0.5 size-4 shrink-0"
+          />
         ) : null}
         <div className="space-y-1">
           <p>{message}</p>
