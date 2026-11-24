@@ -1,7 +1,9 @@
 export {
+  AddressSelectionExhaustedError,
   DEFAULT_ADDRESS_INDEX_STEP,
   DEFAULT_MAX_ATTEMPTS,
   createInitialSelectionState,
+  isSelectionState,
   selectPaymentAddress,
 } from "./address-selection";
 export type {

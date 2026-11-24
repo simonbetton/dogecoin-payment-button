@@ -1,7 +1,7 @@
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { base58check } from "@scure/base";
-import { HDKey } from "@scure/bip32";
+import { HARDENED_OFFSET, HDKey } from "@scure/bip32";
 
 const b58c = base58check(sha256);
 
@@ -20,6 +20,7 @@ export const BITCOIN_BIP32_VERSIONS = {
 export const DOGECOIN_P2PKH_VERSION = 0x1e;
 export const ACCOUNT_XPUB_DEPTH = 3;
 export const EXTERNAL_CHAIN = 0;
+export const EXHAUSTED_ADDRESS_INDEX = HARDENED_OFFSET;
 
 export class DogecoinKeyError extends Error {
   constructor(message: string) {
@@ -103,6 +104,12 @@ export const derivePaymentAddress = (
 ): string => {
   if (!Number.isInteger(addressIndex) || addressIndex < 0) {
     throw new DogecoinKeyError("Address index must be a non-negative integer.");
+  }
+
+  if (addressIndex >= EXHAUSTED_ADDRESS_INDEX) {
+    throw new DogecoinKeyError(
+      "Address index must be a non-hardened BIP32 index."
+    );
   }
 
   const account = parseAccountXpub(accountXpub);

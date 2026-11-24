@@ -79,22 +79,14 @@ export const DogecoinPaymentButton = (props: DogecoinPaymentButtonProps) => {
     fetchImpl: mempoolWatch?.fetchImpl,
     onPaymentAppeared: props.onPaymentAppeared,
     open,
-    paymentAddress: resolution.payment?.address,
-    resolutionStatus: resolution.status,
+    paymentAddress: resolution.canWatch
+      ? resolution.payment?.address
+      : undefined,
   });
 
+  const { retryResolution: handleRetryResolution } = resolution;
+  const { retryWatch: handleRetryWatch } = watch;
   const watchMessage = watchStatusMessage(watch.status, watch.errorMessage);
-
-  const handleRetryOpen = () => {
-    setOpen(false);
-    queueMicrotask(() => {
-      setOpen(true);
-    });
-  };
-
-  const handleRetryWatch = () => {
-    watch.retryWatch();
-  };
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -120,9 +112,10 @@ export const DogecoinPaymentButton = (props: DogecoinPaymentButtonProps) => {
         <PaymentDialogBody
           amount={amount}
           appearedPayload={watch.appearedPayload}
+          canRetryResolution={resolution.canRetryResolution}
           errorMessage={resolution.errorMessage}
           mempoolWatchEnabled={Boolean(mempoolWatch)}
-          onRetryOpen={handleRetryOpen}
+          onRetryOpen={handleRetryResolution}
           onRetryWatch={handleRetryWatch}
           payment={resolution.payment}
           status={resolution.status}

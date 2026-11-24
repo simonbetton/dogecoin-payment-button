@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AddressSelectionResult } from "./address-selection";
 import { DogecoinPaymentButton } from "./dogecoin-payment-button";
 import type { DogecoinPaymentResolveFn } from "./dogecoin-payment-button";
 import type { MempoolWatchAppearedPayload } from "./mempool-watch";
@@ -158,6 +160,212 @@ describe(DogecoinPaymentButton, () => {
     ).toBeInTheDocument();
   });
 
+  it("retries a failed resolution inside the same open dialog", async () => {
+    const resolveAddress = vi
+      .fn<DogecoinPaymentResolveFn>()
+      .mockRejectedValueOnce(new Error("Backend unavailable"))
+      .mockResolvedValueOnce({
+        address: ADDRESS,
+        index: 0,
+        mode: "verified",
+        nextStartIndex: 0,
+        uncheckedMode: false,
+      });
+
+    render(<DogecoinPaymentButton resolveAddress={resolveAddress} />);
+    fireEvent.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Try again" })
+    );
+
+    await expect(
+      within(dialog).findByText(ADDRESS)
+    ).resolves.toBeInTheDocument();
+    expect(resolveAddress).toHaveBeenCalledTimes(2);
+  });
+
+  it("never restarts a watch for the previously displayed address on reopening", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const resolveAddress = vi
+      .fn<DogecoinPaymentResolveFn>()
+      .mockResolvedValueOnce({
+        address: ADDRESS,
+        index: 0,
+        mode: "verified",
+        nextStartIndex: 0,
+        uncheckedMode: false,
+      })
+      .mockResolvedValueOnce({
+        address: ADDRESS_19,
+        index: 19,
+        mode: "verified",
+        nextStartIndex: 19,
+        uncheckedMode: false,
+      });
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(new ReadableStream()))
+    );
+
+    render(
+      <DogecoinPaymentButton
+        mempoolWatch={{ endpoint: "/watch", fetchImpl }}
+        resolveAddress={resolveAddress}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await expect(screen.findByText(ADDRESS)).resolves.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await expect(screen.findByText(ADDRESS_19)).resolves.toBeInTheDocument();
+
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toStrictEqual([
+      `/watch?address=${ADDRESS}`,
+      `/watch?address=${ADDRESS_19}`,
+    ]);
+  });
+
+  it("ignores a late resolver success after close and reopen", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const previous = Promise.withResolvers<AddressSelectionResult>();
+    const current = Promise.withResolvers<AddressSelectionResult>();
+    const resolveAddress = vi
+      .fn<DogecoinPaymentResolveFn>()
+      .mockReturnValueOnce(previous.promise)
+      .mockReturnValueOnce(current.promise);
+    const result: AddressSelectionResult = {
+      address: ADDRESS_19,
+      index: 19,
+      mode: "verified",
+      nextStartIndex: 19,
+      uncheckedMode: false,
+    };
+    render(<DogecoinPaymentButton resolveAddress={resolveAddress} />);
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+
+    await act(async () => {
+      current.resolve(result);
+      await current.promise;
+    });
+    await act(async () => {
+      previous.resolve({
+        ...result,
+        address: ADDRESS,
+        mode: "unchecked",
+        uncheckedMode: true,
+      });
+      await previous.promise;
+    });
+
+    expect(screen.getByText(ADDRESS_19)).toBeInTheDocument();
+    expect(screen.queryByText(ADDRESS)).not.toBeInTheDocument();
+    resolveAddress.mockResolvedValueOnce(result);
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    expect(resolveAddress).toHaveBeenLastCalledWith({
+      startIndex: 19,
+      uncheckedMode: false,
+    });
+  });
+
+  it("shows an independent resolver abort as a retryable error", async () => {
+    const resolveAddress = vi
+      .fn<DogecoinPaymentResolveFn>()
+      .mockRejectedValue(new DOMException("Upstream timed out", "AbortError"));
+    render(<DogecoinPaymentButton resolveAddress={resolveAddress} />);
+    fireEvent.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+
+    await expect(
+      screen.findByText("Upstream timed out")
+    ).resolves.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try again" })
+    ).toBeInTheDocument();
+  });
+
+  it("preserves the unchecked cursor without watching known-used or unchecked addresses", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const resolveAddress = vi
+      .fn<DogecoinPaymentResolveFn>()
+      .mockResolvedValueOnce({
+        address: ADDRESS,
+        index: 0,
+        mode: "exhausted",
+        nextStartIndex: 19,
+        uncheckedMode: true,
+      })
+      .mockResolvedValueOnce({
+        address: ADDRESS_19,
+        index: 19,
+        mode: "unchecked",
+        nextStartIndex: 38,
+        uncheckedMode: true,
+      });
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(""))
+    );
+    render(
+      <DogecoinPaymentButton
+        mempoolWatch={{ endpoint: "/watch", fetchImpl }}
+        resolveAddress={resolveAddress}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await expect(screen.findByText(ADDRESS)).resolves.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await expect(screen.findByText(ADDRESS_19)).resolves.toBeInTheDocument();
+
+    expect(resolveAddress).toHaveBeenLastCalledWith({
+      startIndex: 19,
+      uncheckedMode: true,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("shows a payment details error for an invalid static amount", async () => {
+    render(<DogecoinPaymentButton address={ADDRESS} amount="0" />);
+    fireEvent.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await expect(
+      screen.findByText("Amount must be greater than zero.")
+    ).resolves.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Try again" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Copy address" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps payment details available when watch setup fails", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    render(
+      <DogecoinPaymentButton
+        address={ADDRESS}
+        mempoolWatch={{ endpoint: "https://[" }}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    await expect(screen.findByText(ADDRESS)).resolves.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Watch again" })
+    ).toBeInTheDocument();
+  });
+
+  it("does not report an address as copied when the clipboard rejects", async () => {
+    writeText.mockRejectedValueOnce(new Error("Clipboard permission denied"));
+    render(<DogecoinPaymentButton address={ADDRESS} />);
+    fireEvent.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy address" }));
+    await expect(
+      screen.findByRole("button", { name: "Copy failed" })
+    ).resolves.toBeInTheDocument();
+  });
+
   it("starts a mempool watch and shows detected state with a single callback", async () => {
     const user = userEvent.setup();
     const onPaymentAppeared =
@@ -275,6 +483,43 @@ describe(DogecoinPaymentButton, () => {
       )
     ).resolves.toBeInTheDocument();
     expect(dialog.querySelector("[data-watch-status='busy']")).toBeTruthy();
+  });
+
+  it("retries a busy watch on the same payment and publishes one terminal result", async () => {
+    const onPaymentAppeared =
+      vi.fn<(payload: MempoolWatchAppearedPayload) => void>();
+    const appeared: MempoolWatchAppearedPayload = {
+      address: ADDRESS,
+      detectedAt: "2026-07-13T01:00:00.000Z",
+      outputs: [{ valueBase: "100000000", vout: 0 }],
+      source: "catchup",
+      txid: "catchup-payment",
+    };
+    const event = encodeSse("mempool.watch.appeared", appeared);
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+      .mockResolvedValueOnce(createStreamResponse([event + event]));
+
+    render(
+      <DogecoinPaymentButton
+        address={ADDRESS}
+        amount="1"
+        mempoolWatch={{ endpoint: "/watch", fetchImpl }}
+        onPaymentAppeared={onPaymentAppeared}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send me Dogecoin" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Watch again" }));
+
+    await expect(
+      screen.findByText(/Payment detected in the mempool/u)
+    ).resolves.toBeInTheDocument();
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toStrictEqual([
+      `/watch?address=${ADDRESS}&minValueBase=100000000`,
+      `/watch?address=${ADDRESS}&minValueBase=100000000`,
+    ]);
+    expect(onPaymentAppeared).toHaveBeenCalledExactlyOnceWith(appeared);
   });
 
   it("closes the watch when the dialog closes", async () => {

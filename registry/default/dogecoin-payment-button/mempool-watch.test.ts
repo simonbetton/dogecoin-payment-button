@@ -62,6 +62,10 @@ describe(dogeAmountToBaseUnits, () => {
     expect(dogeAmountToBaseUnits("0.00000001")).toBe("1");
     expect(dogeAmountToBaseUnits("8.25")).toBe("825000000");
   });
+
+  it("converts amounts above the number safe-integer range exactly", () => {
+    expect(dogeAmountToBaseUnits("90071992.54740993")).toBe("9007199254740993");
+  });
 });
 
 describe(isNonNegativeBaseUnits, () => {
@@ -255,6 +259,71 @@ describe(watchMempoolPayment, () => {
     await vi.waitFor(() => {
       expect(onError).toHaveBeenCalledOnce();
     });
+  });
+
+  it("ignores other addresses and underpayments before a qualifying event", async () => {
+    const onAppeared = vi.fn<(payload: MempoolWatchAppearedPayload) => void>();
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        createStreamResponse([
+          encodeSse("mempool.watch.timeout", {
+            ...timeoutPayload,
+            address: "DCzqVvn9NB1QuqBAmvKwvsKA4YXmsZhVir",
+          }),
+          encodeSse("mempool.watch.appeared", {
+            ...appearedPayload,
+            address: "DCzqVvn9NB1QuqBAmvKwvsKA4YXmsZhVir",
+          }),
+          encodeSse("mempool.watch.appeared", {
+            ...appearedPayload,
+            outputs: [{ valueBase: "999999999", vout: 0 }],
+          }),
+          encodeSse("mempool.watch.appeared", appearedPayload),
+        ])
+      )
+    );
+
+    const onTimeout = vi.fn<(payload: MempoolWatchTimeoutPayload) => void>();
+    watchMempoolPayment({
+      address: ADDRESS,
+      endpoint: "/watch",
+      fetchImpl,
+      minValueBase: "1000000000",
+      onAppeared,
+      onTimeout,
+    });
+
+    await vi.waitFor(() => {
+      expect(onAppeared).toHaveBeenCalledExactlyOnceWith(appearedPayload);
+    });
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("cancels a stalled reader on close even when fetch ignores its signal", async () => {
+    const cancel = vi.fn<() => void>();
+    const body = new ReadableStream<Uint8Array>({ cancel });
+    const getReader = vi.spyOn(body, "getReader");
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(body))
+    );
+    const onError = vi.fn<(error: Error) => void>();
+    const handle = watchMempoolPayment({
+      address: ADDRESS,
+      endpoint: "/watch",
+      fetchImpl,
+      onAppeared: vi.fn<(payload: MempoolWatchAppearedPayload) => void>(),
+      onError,
+      onTimeout: vi.fn<(payload: MempoolWatchTimeoutPayload) => void>(),
+    });
+    await vi.waitFor(() => {
+      expect(getReader).toHaveBeenCalledOnce();
+    });
+    handle.close();
+    await vi.waitFor(() => {
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(body.locked).toBeFalsy();
+    });
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it("cancels the request when close is called", async () => {

@@ -64,6 +64,11 @@
           "target": "components/dogecoin-payment-button/payment-button-parts.tsx"
         },
         {
+          "path": "registry/default/dogecoin-payment-button/use-copy-feedback.ts",
+          "type": "registry:component",
+          "target": "components/dogecoin-payment-button/use-copy-feedback.ts"
+        },
+        {
           "path": "registry/default/dogecoin-payment-button/use-payment-button-state.ts",
           "type": "registry:lib",
           "target": "components/dogecoin-payment-button/use-payment-button-state.ts"

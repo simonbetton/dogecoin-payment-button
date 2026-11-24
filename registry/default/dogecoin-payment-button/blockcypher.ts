@@ -52,10 +52,12 @@ const paceRequests = async (
   intervalMs: number,
   signal?: AbortSignal
 ): Promise<void> => {
-  const elapsed = Date.now() - lastRequestAt;
-  if (elapsed < intervalMs) {
-    await sleep(intervalMs - elapsed, signal);
+  let remaining = intervalMs - (Date.now() - lastRequestAt);
+  while (remaining > 0) {
+    await sleep(remaining, signal);
+    remaining = intervalMs - (Date.now() - lastRequestAt);
   }
+  signal?.throwIfAborted();
   lastRequestAt = Date.now();
 };
 
@@ -72,6 +74,8 @@ export const createBlockCypherAddressUsageChecker = (
 
   return async (address, signal) => {
     await paceRequests(intervalMs, signal);
+
+    signal?.throwIfAborted();
 
     const url = new URL(`${baseUrl}/${address}`);
     if (options.token) {
@@ -92,11 +96,18 @@ export const createBlockCypherAddressUsageChecker = (
 
     const body = (await response.json()) as BlockCypherAddressResponse;
 
-    if (typeof body.final_n_tx !== "number") {
-      throw new TypeError("BlockCypher response is missing final_n_tx.");
+    const { final_n_tx: transactionCount } = body;
+    if (
+      typeof transactionCount !== "number" ||
+      !Number.isSafeInteger(transactionCount) ||
+      transactionCount < 0
+    ) {
+      throw new TypeError(
+        "BlockCypher response has a missing or invalid final_n_tx."
+      );
     }
 
-    return body.final_n_tx > 0;
+    return transactionCount > 0;
   };
 };
 
