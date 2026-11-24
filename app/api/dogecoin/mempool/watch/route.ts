@@ -155,9 +155,8 @@ const proxyBody = (
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (finished) {
-            return;
-          }
+          // A timeout or disconnect can close the stream during reader.read().
+          signal.throwIfAborted();
           if (done) {
             finish();
             controller.close();

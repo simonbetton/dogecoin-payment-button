@@ -162,6 +162,7 @@ export const usePaymentResolution = ({
     }
 
     const controller = new AbortController();
+    let ignore = false;
     const selection = { ...selectionRef.current.selection };
 
     void (async () => {
@@ -171,7 +172,10 @@ export const usePaymentResolution = ({
           selection,
           controller.signal
         );
-        if (controller.signal.aborted || activeRequest.current !== request) {
+        if (ignore) {
+          return;
+        }
+        if (activeRequest.current !== request) {
           return;
         }
 
@@ -188,22 +192,27 @@ export const usePaymentResolution = ({
           request,
         });
       } catch (error: unknown) {
-        if (!controller.signal.aborted && activeRequest.current === request) {
-          setSnapshot({
-            outcome: {
-              errorMessage:
-                error instanceof Error || error instanceof DOMException
-                  ? error.message
-                  : "Unable to resolve a Dogecoin payment address.",
-              status: "error",
-            },
-            request,
-          });
+        if (ignore) {
+          return;
         }
+        if (activeRequest.current !== request) {
+          return;
+        }
+        setSnapshot({
+          outcome: {
+            errorMessage:
+              error instanceof Error || error instanceof DOMException
+                ? error.message
+                : "Unable to resolve a Dogecoin payment address.",
+            status: "error",
+          },
+          request,
+        });
       }
     })();
 
     return () => {
+      ignore = true;
       controller.abort();
     };
   }, [activeRequest, request]);

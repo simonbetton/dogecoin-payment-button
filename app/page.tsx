@@ -3,9 +3,8 @@ import { DocsHeader, DocsSidebar } from "@/components/docs/docs-header";
 import { DocsSectionHeading } from "@/components/docs/docs-section-heading";
 import { FileTabs } from "@/components/docs/file-tabs";
 import { InstallationTabs } from "@/components/docs/installation-tabs";
-import { LivePaymentButton } from "@/components/docs/live-payment-button";
-import { PreviewPaymentButton } from "@/components/docs/preview-payment-button";
-import { PrimitiveToggle } from "@/components/docs/primitive-toggle";
+import { LiveDemoSection } from "@/components/docs/live-demo-section";
+import { PreviewSection } from "@/components/docs/preview-section";
 import type { PackageManager } from "@/lib/docs";
 import {
   getInstallCommands,
@@ -22,29 +21,6 @@ import {
   resolveRegistryOrigin,
 } from "@/lib/docs-server";
 import { highlightCode } from "@/lib/highlight-code";
-import {
-  DogecoinKeyError,
-  parseAccountXpub,
-} from "@/registry/default/dogecoin-payment-button";
-
-const MEMPOOL_WATCH_ENDPOINT = "/api/dogecoin/mempool/watch";
-
-const getXpubSetupError = (xpub: string | undefined): string | null => {
-  if (!xpub?.trim()) {
-    return "DOGECOIN_XPUB is not set.";
-  }
-
-  try {
-    parseAccountXpub(xpub);
-    return null;
-  } catch (error) {
-    if (error instanceof DogecoinKeyError) {
-      return error.message;
-    }
-
-    return "DOGECOIN_XPUB could not be validated.";
-  }
-};
 
 const highlightPackageManagerCommands = async (
   commands: Record<PackageManager, string>
@@ -67,9 +43,6 @@ interface HomePageProps {
 const HomePage = async ({ searchParams }: HomePageProps) => {
   const params = await searchParams;
   const primitiveBase = parsePrimitiveBase(params.base);
-  const xpub = process.env.DOGECOIN_XPUB;
-  const setupError = getXpubSetupError(xpub);
-  const hasMempoolToken = Boolean(process.env.ONLYDOGE_API_TOKEN?.trim());
   const registryUrl = getRegistryItemUrl(await resolveRegistryOrigin());
   const installCommands = getInstallCommands(registryUrl);
   const manualDependencyCommands = getManualDependencyCommands();
@@ -165,121 +138,8 @@ const HomePage = async ({ searchParams }: HomePageProps) => {
             </div>
           </section>
 
-          <section aria-labelledby="preview" className="space-y-4">
-            <div className="space-y-2">
-              <DocsSectionHeading id="preview">Preview</DocsSectionHeading>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <PrimitiveToggle value={primitiveBase} />
-                <p className="text-muted-foreground text-sm">
-                  {primitiveBase === "radix"
-                    ? "Install into a Radix UI project."
-                    : "Install into a Base UI project (default)."}
-                </p>
-              </div>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              The block API and registry URL stay the same. Your project&apos;s
-              shadcn base decides whether Base UI or Radix UI primitives are
-              installed for{" "}
-              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                button
-              </code>{" "}
-              and{" "}
-              <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                dialog
-              </code>
-              .
-            </p>
-
-            <div className="overflow-hidden rounded-xl border dark:inset-ring dark:inset-ring-white/5">
-              <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-2">
-                <p className="text-sm font-medium">Preview</p>
-                <p className="text-muted-foreground text-xs">
-                  {primitiveBase === "radix" ? "Radix UI" : "Base UI"} · mocked
-                </p>
-              </div>
-              <div className="bg-card flex min-h-56 items-center justify-center p-6 sm:p-10">
-                <div className="w-full max-w-sm space-y-4 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    Uses a fixed example address and a simulated mempool watch
-                    that detects a payment after three seconds. No environment
-                    variables required.
-                  </p>
-                  <PreviewPaymentButton />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section aria-labelledby="live-demo" className="space-y-4">
-            <div className="space-y-2">
-              <DocsSectionHeading id="live-demo">Live demo</DocsSectionHeading>
-              <p className="text-muted-foreground max-w-[56ch] text-sm text-pretty">
-                Resolves a payment address from{" "}
-                <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                  DOGECOIN_XPUB
-                </code>{" "}
-                on the server
-                {hasMempoolToken
-                  ? " and watches the mempool through the same-origin SSE proxy."
-                  : ". Set ONLYDOGE_API_TOKEN to enable live mempool watching."}
-              </p>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border dark:inset-ring dark:inset-ring-white/5">
-              <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-2">
-                <p className="text-sm font-medium">Live demo</p>
-                <p className="text-muted-foreground text-xs">
-                  {setupError ? "Setup required" : "API route"}
-                </p>
-              </div>
-              <div className="bg-card flex min-h-56 items-center justify-center p-6 sm:p-10">
-                {setupError ? (
-                  <div className="bg-muted/30 w-full max-w-lg space-y-3 rounded-xl border border-dashed p-5">
-                    <h3 className="font-medium">Setup required</h3>
-                    <p className="text-destructive text-sm" role="alert">
-                      {setupError}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      Create a dedicated Dogecoin account at{" "}
-                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                        m/44&apos;/3&apos;/0&apos;
-                      </code>{" "}
-                      and set its public key in{" "}
-                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                        DOGECOIN_XPUB
-                      </code>
-                      . Accepts Dogecoin-native{" "}
-                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                        dgub
-                      </code>{" "}
-                      or Bitcoin-compatible{" "}
-                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-xs">
-                        xpub
-                      </code>
-                      .
-                    </p>
-                    <CodeBlock
-                      code={`# .env.local
-DOGECOIN_XPUB=dgub...
-ONLYDOGE_API_TOKEN=sk_...`}
-                      filename=".env.local"
-                      language="bash"
-                    />
-                  </div>
-                ) : (
-                  <LivePaymentButton
-                    amount="5"
-                    mempoolWatch={
-                      hasMempoolToken
-                        ? { endpoint: MEMPOOL_WATCH_ENDPOINT }
-                        : undefined
-                    }
-                  />
-                )}
-              </div>
-            </div>
-          </section>
+          <PreviewSection primitiveBase={primitiveBase} />
+          <LiveDemoSection />
 
           <section aria-labelledby="installation" className="space-y-4">
             <div className="space-y-2">
