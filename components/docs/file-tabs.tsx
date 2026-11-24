@@ -52,18 +52,21 @@ const buildTabLabels = (files: CodeFile[]): Map<string, string> => {
   return labels;
 };
 
-const toFileTabId = (filename: string): string =>
-  `file-tab-${filename.replaceAll(/[^a-zA-Z0-9_-]/gu, "-")}`;
-
-const toFilePanelId = (filename: string): string =>
-  `file-panel-${filename.replaceAll(/[^a-zA-Z0-9_-]/gu, "-")}`;
-
 export const FileTabs = ({
   className,
   collapsible = false,
   defaultValue,
   files,
 }: FileTabsProps) => {
+  const id = React.useId();
+  const panelId = `${id}-panel`;
+  const tabIds = React.useMemo(
+    () =>
+      new Map(
+        files.map((file, index) => [file.filename, `${id}-tab-${index}`])
+      ),
+    [files, id]
+  );
   const filenames = React.useMemo(
     () => files.map((file) => file.filename),
     [files]
@@ -75,12 +78,12 @@ export const FileTabs = ({
   const handleKeyDown = React.useMemo(
     () =>
       createTabListKeyDownHandler({
-        getTabElementId: toFileTabId,
+        getTabElementId: (filename) => tabIds.get(filename) ?? "",
         onSelect: setValue,
         value: active?.filename ?? "",
         values: filenames,
       }),
-    [active?.filename, filenames]
+    [active?.filename, filenames, tabIds]
   );
 
   if (!active) {
@@ -112,7 +115,7 @@ export const FileTabs = ({
             const label = tabLabels.get(file.filename) ?? file.filename;
             return (
               <button
-                aria-controls={toFilePanelId(file.filename)}
+                aria-controls={selected ? panelId : undefined}
                 aria-selected={selected}
                 className={cn(
                   "focus-visible:ring-ring/50 shrink-0 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3",
@@ -120,7 +123,7 @@ export const FileTabs = ({
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                id={toFileTabId(file.filename)}
+                id={tabIds.get(file.filename)}
                 key={file.filename}
                 onClick={() => {
                   setValue(file.filename);
@@ -138,8 +141,8 @@ export const FileTabs = ({
         </div>
       </ScrollArea>
       <div
-        aria-labelledby={toFileTabId(active.filename)}
-        id={toFilePanelId(active.filename)}
+        aria-labelledby={tabIds.get(active.filename)}
+        id={panelId}
         role="tabpanel"
         tabIndex={0}
       >
