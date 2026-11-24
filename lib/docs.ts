@@ -136,7 +136,7 @@ const CONSUMER_IMPORT_REWRITE =
   /@\/registry\/default\/dogecoin-payment-button/gu;
 
 export const toConsumerImportPath = (source: string): string =>
-  source.replace(
+  source.replaceAll(
     CONSUMER_IMPORT_REWRITE,
     "@/components/dogecoin-payment-button"
   );
