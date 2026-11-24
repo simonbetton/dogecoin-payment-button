@@ -16,6 +16,7 @@ import type {
   MempoolWatchAppearedPayload,
   MempoolWatchStatus,
 } from "./mempool-watch";
+import { useCopyFeedback } from "./use-copy-feedback";
 import { watchStatusClassName } from "./watch-status";
 
 export interface ResolvedPayment {
@@ -44,40 +45,22 @@ interface CopyAddressButtonProps {
 }
 
 const CopyAddressButton = ({ address }: CopyAddressButtonProps) => {
-  const [copied, setCopied] = React.useState(false);
-  const timeoutRef = React.useRef<number | null>(null);
-
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-    },
-    []
-  );
-
-  const handleCopy = async () => {
-    setCopied(true);
-    if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = window.setTimeout(() => {
-      setCopied(false);
-    }, 1600);
-
-    try {
-      await navigator.clipboard.writeText(address);
-    } catch {
-      // Keep the copied feedback even if the Clipboard API is unavailable.
-    }
-  };
+  const { copy, status } = useCopyFeedback(address);
+  const copied = status === "copied";
+  const failed = status === "error";
+  let label = "Copy address";
+  if (copied) {
+    label = "Address copied";
+  } else if (failed) {
+    label = "Copy failed";
+  }
 
   return (
     <Button
-      aria-label={copied ? "Address copied" : "Copy address"}
+      aria-label={label}
       className="w-full"
       onClick={() => {
-        void handleCopy();
+        void copy();
       }}
       type="button"
       variant="outline"
@@ -103,10 +86,9 @@ const CopyAddressButton = ({ address }: CopyAddressButtonProps) => {
             copied ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
           )}
         >
-          Copy address
+          {failed ? "Copy failed" : "Copy address"}
         </span>
         <span
-          aria-live="polite"
           className={cn(
             "col-start-1 row-start-1 transition-all duration-200",
             copied ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
@@ -114,6 +96,9 @@ const CopyAddressButton = ({ address }: CopyAddressButtonProps) => {
         >
           Copied
         </span>
+      </span>
+      <span aria-live="polite" className="sr-only">
+        {copied || failed ? label : null}
       </span>
     </Button>
   );
@@ -225,7 +210,7 @@ const PaymentDetails = ({
       </p>
     </div>
 
-    <CopyAddressButton address={payment.address} />
+    <CopyAddressButton address={payment.address} key={payment.address} />
 
     {watchMessage ? (
       <MempoolWatchBanner
@@ -241,6 +226,7 @@ const PaymentDetails = ({
 export interface PaymentDialogBodyProps {
   amount?: string;
   appearedPayload: MempoolWatchAppearedPayload | null;
+  canRetryResolution: boolean;
   errorMessage: string | null;
   mempoolWatchEnabled: boolean;
   payment: ResolvedPayment | null;
@@ -254,6 +240,7 @@ export interface PaymentDialogBodyProps {
 export const PaymentDialogBody = ({
   amount,
   appearedPayload,
+  canRetryResolution,
   errorMessage,
   mempoolWatchEnabled,
   payment,
@@ -274,14 +261,16 @@ export const PaymentDialogBody = ({
     {status === "error" ? (
       <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
         <p>{errorMessage ?? "Something went wrong."}</p>
-        <Button
-          className="mt-3"
-          onClick={onRetryOpen}
-          type="button"
-          variant="outline"
-        >
-          Try again
-        </Button>
+        {canRetryResolution ? (
+          <Button
+            className="mt-3"
+            onClick={onRetryOpen}
+            type="button"
+            variant="outline"
+          >
+            Try again
+          </Button>
+        ) : null}
       </div>
     ) : null}
 

@@ -15,29 +15,25 @@ interface PackageManagerTabsProps {
   highlightedCommands?: Partial<Record<PackageManager, string>>;
 }
 
-const getPackageManagerTabId = (manager: PackageManager): string =>
-  `package-manager-${manager}`;
-
-const getPackageManagerPanelId = (manager: PackageManager): string =>
-  `package-manager-panel-${manager}`;
-
 export const PackageManagerTabs = ({
   className,
   commands,
   defaultValue = DEFAULT_PACKAGE_MANAGER,
   highlightedCommands,
 }: PackageManagerTabsProps) => {
+  const id = React.useId();
+  const panelId = `${id}-panel`;
   const [value, setValue] = React.useState<PackageManager>(defaultValue);
   const command = commands[value];
   const handleKeyDown = React.useMemo(
     () =>
       createTabListKeyDownHandler({
-        getTabElementId: getPackageManagerTabId,
+        getTabElementId: (manager) => `${id}-tab-${manager}`,
         onSelect: setValue,
         value,
         values: PACKAGE_MANAGERS,
       }),
-    [value]
+    [id, value]
   );
 
   return (
@@ -51,7 +47,7 @@ export const PackageManagerTabs = ({
           const selected = manager === value;
           return (
             <button
-              aria-controls={getPackageManagerPanelId(manager)}
+              aria-controls={selected ? panelId : undefined}
               aria-selected={selected}
               className={cn(
                 "focus-visible:ring-ring/50 rounded-md px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3",
@@ -59,7 +55,7 @@ export const PackageManagerTabs = ({
                   ? "bg-background text-foreground shadow-sm dark:shadow-none"
                   : "text-muted-foreground hover:text-foreground"
               )}
-              id={getPackageManagerTabId(manager)}
+              id={`${id}-tab-${manager}`}
               key={manager}
               onClick={() => {
                 setValue(manager);
@@ -75,8 +71,8 @@ export const PackageManagerTabs = ({
         })}
       </div>
       <div
-        aria-labelledby={getPackageManagerTabId(value)}
-        id={getPackageManagerPanelId(value)}
+        aria-labelledby={`${id}-tab-${value}`}
+        id={panelId}
         role="tabpanel"
         tabIndex={0}
       >

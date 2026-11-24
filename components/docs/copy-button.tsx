@@ -1,63 +1,48 @@
 "use client";
 
-import { CheckIcon, CopyIcon } from "lucide-react";
-import * as React from "react";
+import { CheckIcon, CircleAlertIcon, CopyIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCopyFeedback } from "@/registry/default/dogecoin-payment-button/use-copy-feedback";
 
 interface CopyButtonProps {
   className?: string;
   value: string;
 }
 
-export const CopyButton = ({ className, value }: CopyButtonProps) => {
-  const [copied, setCopied] = React.useState(false);
-  const timeoutRef = React.useRef<number | null>(null);
-
-  React.useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-    },
-    []
-  );
-
-  const handleCopy = async () => {
-    setCopied(true);
-    if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = window.setTimeout(() => {
-      setCopied(false);
-    }, 1600);
-
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      // Keep the copied feedback even if the Clipboard API is unavailable.
-    }
-  };
+const CopyButtonContent = ({ className, value }: CopyButtonProps) => {
+  const { copy, status } = useCopyFeedback(value);
+  const copied = status === "copied";
+  const failed = status === "error";
+  let label = "Copy code";
+  if (copied) {
+    label = "Copied";
+  } else if (failed) {
+    label = "Copy failed";
+  }
 
   return (
     <>
       <Button
-        aria-label={copied ? "Copied" : "Copy code"}
+        aria-label={label}
         className={cn("size-7", className)}
         onClick={() => {
-          void handleCopy();
+          void copy();
         }}
         size="icon-sm"
         type="button"
         variant="ghost"
       >
         <span className="relative inline-flex size-3.5 items-center justify-center">
+          {failed ? (
+            <CircleAlertIcon aria-hidden="true" className="absolute size-3.5" />
+          ) : null}
           <CopyIcon
             aria-hidden="true"
             className={cn(
               "absolute size-3.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none",
-              copied ? "scale-50 opacity-0" : "scale-100 opacity-100"
+              copied || failed ? "scale-50 opacity-0" : "scale-100 opacity-100"
             )}
           />
           <CheckIcon
@@ -74,8 +59,13 @@ export const CopyButton = ({ className, value }: CopyButtonProps) => {
         />
       </Button>
       <span aria-live="polite" className="sr-only">
-        {copied ? "Copied to clipboard" : ""}
+        {copied ? "Copied to clipboard" : null}
+        {failed ? "Copy failed" : null}
       </span>
     </>
   );
 };
+
+export const CopyButton = (props: CopyButtonProps) => (
+  <CopyButtonContent key={props.value} {...props} />
+);

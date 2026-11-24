@@ -132,6 +132,51 @@ describe(selectPaymentAddress, () => {
     ).rejects.toMatchObject({ name: "AbortError" });
   });
 
+  it("does not fall back when a canceled checker rejects with an ordinary error", async () => {
+    const controller = new AbortController();
+    const deriveAddress = vi.fn<typeof derive>(derive);
+
+    await expect(
+      selectPaymentAddress({
+        checker: () => {
+          controller.abort();
+          return Promise.reject(new Error("connection closed"));
+        },
+        deriveAddress,
+        signal: controller.signal,
+      })
+    ).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(deriveAddress).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  it("exhausts the receive chain without deriving a hardened index", async () => {
+    const lastIndex = 2 ** 31 - 1;
+    const deriveAddress = vi.fn<typeof derive>(derive);
+    const result = await selectPaymentAddress({
+      checker: () => Promise.resolve(true),
+      deriveAddress,
+      startIndex: lastIndex,
+    });
+
+    expect(result).toMatchObject({
+      index: lastIndex,
+      mode: "exhausted",
+      nextStartIndex: lastIndex + 1,
+      uncheckedMode: true,
+    });
+
+    await expect(
+      selectPaymentAddress({
+        checker: () => Promise.resolve(true),
+        deriveAddress,
+        startIndex: result.nextStartIndex,
+        uncheckedMode: result.uncheckedMode,
+      })
+    ).rejects.toThrow(/No payment address indices remain/u);
+    expect(deriveAddress).toHaveBeenCalledExactlyOnceWith(lastIndex);
+  });
+
   it("propagates abort errors from the checker", async () => {
     const controller = new AbortController();
 

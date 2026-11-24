@@ -126,7 +126,7 @@ Swap the backend by passing a custom `AddressUsageChecker` (or editing the shipp
 
 ## Mempool watching
 
-Opt in with `mempoolWatch.endpoint`. When a payment address is shown:
+Opt in with `mempoolWatch.endpoint`. The button watches static addresses and checked or transient-fallback selections. It skips the known-used exhaustion result and subsequent unchecked selections. For an eligible address:
 
 1. The client opens a one-shot SSE watch for that address.
 2. If `amount` is set, it is converted exactly to `minValueBase` (`1 DOGE = 100000000`).

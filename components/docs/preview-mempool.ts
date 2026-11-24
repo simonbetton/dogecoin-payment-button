@@ -39,7 +39,7 @@ const createFakeMempoolResponse = (address: string): Response => {
               encodeSse("mempool.watch.appeared", {
                 address,
                 detectedAt: new Date().toISOString(),
-                outputs: [{ valueBase: "50000000", vout: 0 }],
+                outputs: [{ valueBase: "500000000", vout: 0 }],
                 source: "live",
                 txid: PREVIEW_TXID,
               })

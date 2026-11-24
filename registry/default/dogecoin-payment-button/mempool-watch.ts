@@ -108,17 +108,10 @@ const parseSseFrame = (raw: string): SseFrame | null => {
 export const dogeAmountToBaseUnits = (amount: string): string => {
   const normalized = normalizeDogecoinAmount(amount);
   const [wholePart, fractionalPart = ""] = normalized.split(".");
-  const fractional = fractionalPart.padEnd(8, "0");
-  const baseUnits =
-    Number(wholePart) * DOGE_BASE_UNITS_PER_COIN + Number(fractional);
-
-  if (!Number.isSafeInteger(baseUnits)) {
-    throw new MempoolWatchError(
-      "Amount is too large to convert to base units exactly."
-    );
-  }
-
-  return String(baseUnits);
+  return `${wholePart}${fractionalPart.padEnd(8, "0")}`.replace(
+    /^0+(?=\d)/u,
+    ""
+  );
 };
 
 export const isNonNegativeBaseUnits = (value: string): boolean =>
@@ -160,6 +153,7 @@ export const parseMempoolWatchAppearedPayload = (
     throw new MempoolWatchError("Appeared event is missing outputs.");
   }
 
+  const outputIndexes = new Set<number>();
   const normalizedOutputs = outputs.map((output, index) => {
     if (!isRecord(output)) {
       throw new MempoolWatchError(
@@ -167,7 +161,12 @@ export const parseMempoolWatchAppearedPayload = (
       );
     }
 
-    if (typeof output.vout !== "number" || !Number.isInteger(output.vout)) {
+    if (
+      typeof output.vout !== "number" ||
+      !Number.isSafeInteger(output.vout) ||
+      output.vout < 0 ||
+      outputIndexes.has(output.vout)
+    ) {
       throw new MempoolWatchError(
         `Appeared event output at index ${index} has an invalid vout.`
       );
@@ -182,6 +181,7 @@ export const parseMempoolWatchAppearedPayload = (
       );
     }
 
+    outputIndexes.add(output.vout);
     return {
       valueBase: output.valueBase,
       vout: output.vout,
@@ -300,91 +300,99 @@ const dispatchOutcome = (
   }
 };
 
+const meetsMinimum = (
+  outputs: MempoolWatchOutput[],
+  minimum: bigint
+): boolean => {
+  let remaining = minimum;
+  for (const output of outputs) {
+    remaining -= BigInt(output.valueBase);
+  }
+  return remaining <= 0;
+};
+
+const matchWatchFrame = (
+  frame: SseFrame,
+  address: string,
+  minimum: bigint
+): WatchOutcome | undefined => {
+  if (frame.event === MEMPOOL_WATCH_APPEARED_EVENT) {
+    const payload = parseMempoolWatchAppearedPayload(frame.data);
+    if (payload.address === address && meetsMinimum(payload.outputs, minimum)) {
+      return { payload, type: "appeared" };
+    }
+  } else if (frame.event === MEMPOOL_WATCH_TIMEOUT_EVENT) {
+    const payload = parseMempoolWatchTimeoutPayload(frame.data);
+    if (payload.address === address) {
+      return { payload, type: "timeout" };
+    }
+  }
+  return undefined;
+};
+
 const readWatchOutcome = async (
   response: Response,
-  shouldStop: () => boolean
+  signal: AbortSignal,
+  address: string,
+  minimum: bigint
 ): Promise<WatchOutcome> => {
   if (response.status === 409) {
     return { type: "busy" };
   }
 
   if (!response.ok) {
-    return {
-      error: new MempoolWatchError(
-        `Mempool watch failed with status ${response.status}.`
-      ),
-      type: "error",
-    };
+    throw new MempoolWatchError(
+      `Mempool watch failed with status ${response.status}.`
+    );
   }
 
   if (!response.body) {
-    return {
-      error: new MempoolWatchError("Mempool watch response had no body."),
-      type: "error",
-    };
+    throw new MempoolWatchError("Mempool watch response had no body.");
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-
-  while (!shouldStop()) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-
-    const decoded = decoder.decode(value, { stream: true });
-    const parsed = parseSseChunk(buffer, decoded);
-    buffer = parsed.remaining;
-
-    for (const frame of parsed.frames) {
-      if (frame.event === MEMPOOL_WATCH_APPEARED_EVENT) {
-        try {
-          return {
-            payload: parseMempoolWatchAppearedPayload(frame.data),
-            type: "appeared",
-          };
-        } catch (error) {
-          return {
-            error:
-              error instanceof Error
-                ? error
-                : new MempoolWatchError("Failed to parse appeared event."),
-            type: "error",
-          };
-        }
-      }
-
-      if (frame.event === MEMPOOL_WATCH_TIMEOUT_EVENT) {
-        try {
-          return {
-            payload: parseMempoolWatchTimeoutPayload(frame.data),
-            type: "timeout",
-          };
-        } catch (error) {
-          return {
-            error:
-              error instanceof Error
-                ? error
-                : new MempoolWatchError("Failed to parse timeout event."),
-            type: "error",
-          };
-        }
-      }
-    }
-  }
-
-  if (shouldStop()) {
-    return { type: "closed" };
-  }
-
-  return {
-    error: new MempoolWatchError(
-      "Mempool watch ended before a payment appeared."
-    ),
-    type: "error",
+  const cancelReader = () => {
+    // The network may have already closed the body when the signal fired.
+    void reader.cancel().catch(() => {
+      /* The stream is already closed or errored. */
+    });
   };
+  signal.addEventListener("abort", cancelReader, { once: true });
+
+  try {
+    while (!signal.aborted) {
+      const { done, value } = await reader.read();
+      if (signal.aborted) {
+        return { type: "closed" };
+      }
+      if (done) {
+        throw new MempoolWatchError(
+          "Mempool watch ended before a payment appeared."
+        );
+      }
+
+      const parsed = parseSseChunk(
+        buffer,
+        decoder.decode(value, { stream: true })
+      );
+      buffer = parsed.remaining;
+      for (const frame of parsed.frames) {
+        const outcome = matchWatchFrame(frame, address, minimum);
+        if (outcome) {
+          return outcome;
+        }
+      }
+    }
+    return { type: "closed" };
+  } finally {
+    signal.removeEventListener("abort", cancelReader);
+    if (!signal.aborted) {
+      cancelReader();
+    }
+    reader.releaseLock();
+  }
 };
 
 /**
@@ -413,6 +421,8 @@ export const watchMempoolPayment = (
     );
   }
 
+  const url = buildMempoolWatchEndpointUrl(endpoint, address, minValueBase);
+  const minimum = BigInt(minValueBase ?? "0");
   const controller = new AbortController();
   let settled = false;
 
@@ -421,6 +431,7 @@ export const watchMempoolPayment = (
       return;
     }
     settled = true;
+    signal?.removeEventListener("abort", close);
     controller.abort();
   };
 
@@ -432,11 +443,11 @@ export const watchMempoolPayment = (
     signal.addEventListener("abort", close, { once: true });
   }
 
-  const url = buildMempoolWatchEndpointUrl(endpoint, address, minValueBase);
-
   void (async () => {
+    let response: Response | undefined;
+    let outcome: WatchOutcome;
     try {
-      const response = await fetchImpl(url, {
+      response = await fetchImpl(url, {
         headers: {
           Accept: "text/event-stream",
           "Cache-Control": "no-store",
@@ -445,35 +456,32 @@ export const watchMempoolPayment = (
         signal: controller.signal,
       });
 
-      if (settled) {
-        return;
-      }
-
-      const outcome = await readWatchOutcome(response, () => settled);
-      if (settled || outcome.type === "closed") {
-        return;
-      }
-
-      settled = true;
-      controller.abort();
-      dispatchOutcome(options, outcome);
+      outcome = settled
+        ? { type: "closed" }
+        : await readWatchOutcome(response, controller.signal, address, minimum);
     } catch (error: unknown) {
-      if (
-        settled ||
-        controller.signal.aborted ||
-        (error instanceof DOMException && error.name === "AbortError")
-      ) {
-        return;
-      }
-
-      settled = true;
-      dispatchOutcome(options, {
+      outcome = {
         error:
           error instanceof Error
             ? error
             : new MempoolWatchError("Mempool watch connection failed."),
         type: "error",
-      });
+      };
+    } finally {
+      if (response?.body && !response.bodyUsed) {
+        void response.body.cancel().catch(() => {
+          /* The stream is already closed or errored. */
+        });
+      }
+    }
+
+    if (!settled) {
+      close();
+      try {
+        dispatchOutcome(options, outcome);
+      } catch {
+        // Consumer callbacks cannot change the terminal transport outcome.
+      }
     }
   })();
 

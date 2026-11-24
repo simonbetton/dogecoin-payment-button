@@ -1,7 +1,15 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { CopyButton } from "@/components/docs/copy-button";
 import { FileTabs } from "@/components/docs/file-tabs";
 import { InstallationTabs } from "@/components/docs/installation-tabs";
 import { PackageManagerTabs } from "@/components/docs/package-manager-tabs";
@@ -10,6 +18,33 @@ import { PrimitiveToggle } from "@/components/docs/primitive-toggle";
 describe("docs controls", () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the latest clipboard outcome when writes settle out of order", async () => {
+    const first = Promise.withResolvers<undefined>();
+    const second = Promise.withResolvers<undefined>();
+    const writeText = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    render(<CopyButton value="example code" />);
+
+    const button = screen.getByRole("button", { name: "Copy code" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(button).toHaveAccessibleName("Copy code");
+
+    second.reject(new Error("Permission denied"));
+    await expect(
+      screen.findByRole("button", { name: "Copy failed" })
+    ).resolves.toBe(button);
+    await act(async () => {
+      first.resolve(undefined);
+      await first.promise;
+    });
+    expect(button).toHaveAccessibleName("Copy failed");
   });
 
   it("switches package-manager install commands", async () => {
@@ -199,6 +234,44 @@ describe("docs controls", () => {
     expect(screen.getByRole("link", { name: "Base UI" })).not.toHaveAttribute(
       "aria-current"
     );
+  });
+
+  it("keeps keyboard focus and ARIA targets inside the second manual command group", async () => {
+    const user = userEvent.setup();
+    const commands = {
+      bun: "bun command",
+      npm: "npm command",
+      pnpm: "pnpm command",
+      yarn: "yarn command",
+    };
+    render(
+      <InstallationTabs
+        defaultMode="manual"
+        installCommands={commands}
+        manualDependencyCommands={commands}
+        manualRegistryCommands={commands}
+        sourceFiles={[]}
+      />
+    );
+
+    const [first, second] = screen.getAllByRole("tablist", {
+      name: "Package manager",
+    });
+    within(second).getByRole("tab", { name: "pnpm" }).focus();
+    await user.keyboard("{ArrowRight}");
+
+    const selected = within(second).getByRole("tab", {
+      name: "npm",
+      selected: true,
+    });
+    expect(selected).toHaveFocus();
+    const firstTab = within(first).getByRole("tab", { name: "npm" });
+    expect(selected.id).not.toBe(firstTab.id);
+    expect(
+      document.querySelector(
+        `#${CSS.escape(selected.getAttribute("aria-controls") ?? "")}`
+      )
+    ).toHaveAttribute("aria-labelledby", selected.id);
   });
 
   it("supports arrow-key navigation between package manager tabs", async () => {

@@ -127,6 +127,112 @@ describe("GET /api/dogecoin/mempool/watch", () => {
     expect(upstreamAborted).toBeTruthy();
   });
 
+  it("releases the upstream watch at the deadline with an unread downstream body", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn<() => void>();
+    const upstreamBody = new ReadableStream<Uint8Array>({
+      cancel,
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(": heartbeat\n\n"));
+        controller.enqueue(new TextEncoder().encode(": heartbeat\n\n"));
+      },
+    });
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(upstreamBody))
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await GET(createRequest(`address=${ADDRESS}`));
+
+    await vi.advanceTimersByTimeAsync(290_000);
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBeTruthy();
+    expect(cancel).toHaveBeenCalledOnce();
+    await expect(response.text()).resolves.toContain(
+      "event: mempool.watch.timeout"
+    );
+  });
+
+  it("drops an incomplete upstream event when emitting the proxy timeout", async () => {
+    vi.useFakeTimers();
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            ": ping\n\nevent: mempool.watch.appeared\ndata: {"
+          )
+        );
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(() => Promise.resolve(new Response(upstream)))
+    );
+    const response = await GET(createRequest(`address=${ADDRESS}`));
+    const body = response.text();
+
+    await vi.advanceTimersByTimeAsync(290_000);
+
+    await expect(body).resolves.toMatch(
+      /^: ping\n\nevent: mempool\.watch\.timeout\n/u
+    );
+  });
+
+  it("applies the deadline while upstream headers are pending", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn<typeof fetch>(
+      (_input, init) =>
+        // oxlint-disable-next-line promise/avoid-new -- Simulate a stalled abortable fetch.
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => {
+              reject(init.signal?.reason);
+            },
+            { once: true }
+          );
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = GET(createRequest(`address=${ADDRESS}`));
+
+    await vi.advanceTimersByTimeAsync(290_000);
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBeTruthy();
+    const response = await pending;
+    await expect(response.text()).resolves.toContain(
+      "event: mempool.watch.timeout"
+    );
+  });
+
+  it("cancels upstream immediately when the response body is canceled", async () => {
+    const cancel = vi.fn<() => void>();
+    const upstreamBody = new ReadableStream<Uint8Array>({ cancel });
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(upstreamBody))
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET(createRequest(`address=${ADDRESS}`));
+    await response.body?.cancel();
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBeTruthy();
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("skips upstream work for an already disconnected client", async () => {
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(""))
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET(
+      createRequest(`address=${ADDRESS}`, AbortSignal.abort())
+    );
+
+    expect(response.status).toBe(499);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("propagates upstream 409 as a busy response", async () => {
     const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(Response.json({ error: "session open" }, { status: 409 }))

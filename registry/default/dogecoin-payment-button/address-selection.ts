@@ -1,3 +1,5 @@
+import { EXHAUSTED_ADDRESS_INDEX } from "./dogecoin";
+
 export const DEFAULT_ADDRESS_INDEX_STEP = 19;
 export const DEFAULT_MAX_ATTEMPTS = 20;
 
@@ -16,6 +18,32 @@ export interface SelectionState {
   startIndex: number;
   uncheckedMode: boolean;
 }
+
+export class AddressSelectionExhaustedError extends Error {
+  constructor() {
+    super("No payment address indices remain on the receive chain.");
+    this.name = "AddressSelectionExhaustedError";
+  }
+}
+
+export const isSelectionState = (value: unknown): value is SelectionState => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const { startIndex, uncheckedMode } = value as Partial<SelectionState>;
+  return (
+    typeof startIndex === "number" &&
+    Number.isInteger(startIndex) &&
+    startIndex >= 0 &&
+    typeof uncheckedMode === "boolean" &&
+    (startIndex < EXHAUSTED_ADDRESS_INDEX ||
+      (startIndex === EXHAUSTED_ADDRESS_INDEX && uncheckedMode))
+  );
+};
+
+const nextIndex = (index: number, step: number): number =>
+  Math.min(index + step, EXHAUSTED_ADDRESS_INDEX);
 
 export interface AddressSelectionResult {
   address: string;
@@ -60,19 +88,25 @@ export const selectPaymentAddress = async (
   const startIndex = options.startIndex ?? 0;
   const uncheckedMode = options.uncheckedMode ?? false;
 
-  if (!Number.isInteger(addressIndexStep) || addressIndexStep < 1) {
+  if (!Number.isSafeInteger(addressIndexStep) || addressIndexStep < 1) {
     throw new Error("addressIndexStep must be a positive integer.");
   }
 
-  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+  if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1) {
     throw new Error("maxAttempts must be a positive integer.");
   }
 
-  if (!Number.isInteger(startIndex) || startIndex < 0) {
-    throw new Error("startIndex must be a non-negative integer.");
+  if (!isSelectionState({ startIndex, uncheckedMode })) {
+    throw new Error(
+      "startIndex must be a non-hardened BIP32 index or an exhausted cursor."
+    );
   }
 
   assertNotAborted(options.signal);
+
+  if (startIndex === EXHAUSTED_ADDRESS_INDEX) {
+    throw new AddressSelectionExhaustedError();
+  }
 
   if (uncheckedMode) {
     const address = options.deriveAddress(startIndex);
@@ -80,37 +114,36 @@ export const selectPaymentAddress = async (
       address,
       index: startIndex,
       mode: "unchecked",
-      nextStartIndex: startIndex + addressIndexStep,
+      nextStartIndex: nextIndex(startIndex, addressIndexStep),
       uncheckedMode: true,
     };
   }
 
-  let lastCheckedIndex = startIndex;
-  let lastCheckedAddress = options.deriveAddress(startIndex);
+  let index = startIndex;
+  let address = "";
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     assertNotAborted(options.signal);
-
-    const index = startIndex + attempt * addressIndexStep;
-    const address =
-      attempt === 0 ? lastCheckedAddress : options.deriveAddress(index);
-    lastCheckedIndex = index;
-    lastCheckedAddress = address;
+    address = options.deriveAddress(index);
+    const next = nextIndex(index, addressIndexStep);
 
     let used: boolean;
     try {
       used = await options.checker(address, options.signal);
     } catch (error) {
+      assertNotAborted(options.signal);
       if (error instanceof DOMException && error.name === "AbortError") {
         throw error;
       }
 
-      const fallbackIndex = index + addressIndexStep;
+      if (next === EXHAUSTED_ADDRESS_INDEX) {
+        throw new AddressSelectionExhaustedError();
+      }
       return {
-        address: options.deriveAddress(fallbackIndex),
-        index: fallbackIndex,
+        address: options.deriveAddress(next),
+        index: next,
         mode: "transient-fallback",
-        nextStartIndex: fallbackIndex,
+        nextStartIndex: next,
         uncheckedMode: false,
       };
     }
@@ -126,13 +159,17 @@ export const selectPaymentAddress = async (
         uncheckedMode: false,
       };
     }
+    if (next === EXHAUSTED_ADDRESS_INDEX || attempt + 1 === maxAttempts) {
+      break;
+    }
+    index = next;
   }
 
   return {
-    address: lastCheckedAddress,
-    index: lastCheckedIndex,
+    address,
+    index,
     mode: "exhausted",
-    nextStartIndex: lastCheckedIndex + addressIndexStep,
+    nextStartIndex: nextIndex(index, addressIndexStep),
     uncheckedMode: true,
   };
 };

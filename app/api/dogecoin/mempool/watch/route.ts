@@ -94,82 +94,214 @@ const describeFetchError = (error: unknown): string => {
   return parts.filter((part) => part.length > 0).join(" | ") || "unknown error";
 };
 
-const encodeTimeoutEvent = (address: string): Uint8Array => {
+const timeoutEvent = (address: string): string => {
   const payload = JSON.stringify({
     address,
     expiresAt: new Date().toISOString(),
   });
 
-  return new TextEncoder().encode(
-    `event: ${MEMPOOL_WATCH_TIMEOUT_EVENT}\ndata: ${payload}\n\n`
-  );
+  return `event: ${MEMPOOL_WATCH_TIMEOUT_EVENT}\ndata: ${payload}\n\n`;
 };
 
-const pipeUpstreamBody = async (
+// Forward complete SSE frames, so a proxy timeout cannot complete a partial
+// upstream event with invalid JSON. Comments and heartbeat frames pass through.
+const SSE_FRAME_BOUNDARY = /\r?\n\r?\n/gu;
+
+const completeFrameEnd = (buffer: string): number => {
+  let end = 0;
+  for (const delimiter of buffer.matchAll(SSE_FRAME_BOUNDARY)) {
+    end = delimiter.index + delimiter[0].length;
+  }
+  return end;
+};
+
+const proxyBody = (
   body: ReadableStream<Uint8Array>,
-  writable: WritableStream<Uint8Array>,
   address: string,
-  proxyDeadlineAt: number,
-  request: Request,
-  onClientAbort: () => void,
-  onProxyTimeout: () => void
-): Promise<void> => {
-  const writer = writable.getWriter();
+  upstreamController: AbortController,
+  timeoutReason: DOMException,
+  cleanup: () => void
+): ReadableStream<Uint8Array> => {
   const reader = body.getReader();
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  // oxlint-disable-next-line promise/avoid-new -- Adapts the callback timer for the stream read race.
-  const proxyTimeout = new Promise<"timeout">((resolve) => {
-    timeoutId = setTimeout(
-      () => {
-        resolve("timeout");
-      },
-      Math.max(0, proxyDeadlineAt - Date.now())
-    );
-  });
+  const { signal } = upstreamController;
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finished = false;
+  let onAbort: () => void;
 
-  try {
-    while (true) {
-      const readResult = reader.read();
-      const result = await Promise.race([
-        readResult.then((value) => ({ type: "read" as const, value })),
-        proxyTimeout.then((value) => ({ type: value })),
-      ]);
+  const finish = () => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    signal.removeEventListener("abort", onAbort);
+    cleanup();
+    void reader.cancel().catch(() => {
+      // The upstream signal may have already closed the body.
+    });
+    reader.releaseLock();
+  };
 
-      if (result.type === "timeout") {
-        await writer.write(encodeTimeoutEvent(address));
-        await writer.close();
-        onProxyTimeout();
-        try {
-          await reader.cancel("Mempool proxy watch timed out.");
-        } catch {
-          // The upstream stream was already closed by the abort.
-        }
+  return new ReadableStream<Uint8Array>({
+    cancel() {
+      finish();
+      upstreamController.abort();
+    },
+    async pull(controller) {
+      if (finished) {
         return;
       }
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          // A timeout or disconnect can close the stream during reader.read().
+          signal.throwIfAborted();
+          if (done) {
+            finish();
+            controller.close();
+            return;
+          }
 
-      const { done, value } = result.value;
-      if (done) {
-        break;
+          buffer += decoder.decode(value, { stream: true });
+          const end = completeFrameEnd(buffer);
+          if (end > 0) {
+            controller.enqueue(encoder.encode(buffer.slice(0, end)));
+            buffer = buffer.slice(end);
+            return;
+          }
+        }
+      } catch (error: unknown) {
+        if (!finished) {
+          finish();
+          controller.error(error);
+          upstreamController.abort();
+        }
       }
-      if (value) {
-        await writer.write(value);
-      }
-    }
-    await writer.close();
-  } catch {
-    try {
-      await writer.abort();
-    } catch {
-      // Stream already closed.
-    }
-  } finally {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
+    },
+    start(controller) {
+      onAbort = () => {
+        finish();
+        if (signal.reason === timeoutReason) {
+          controller.enqueue(encoder.encode(timeoutEvent(address)));
+        }
+        controller.close();
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+    },
+  });
+};
+
+const openUpstreamWatch = async ({
+  address,
+  proxyDeadlineAt,
+  request,
+  token,
+  upstreamUrl,
+}: {
+  address: string;
+  proxyDeadlineAt: number;
+  request: Request;
+  token: string;
+  upstreamUrl: string;
+}): Promise<Response> => {
+  const upstreamController = new AbortController();
+  const timeoutReason = new DOMException(
+    "Mempool proxy watch timed out.",
+    "TimeoutError"
+  );
+  const timer = setTimeout(
+    () => {
+      upstreamController.abort(timeoutReason);
+    },
+    Math.max(0, proxyDeadlineAt - Date.now())
+  );
+  const onClientAbort = () => {
+    upstreamController.abort();
+  };
+  request.signal.addEventListener("abort", onClientAbort, { once: true });
+  const cleanup = () => {
+    clearTimeout(timer);
     request.signal.removeEventListener("abort", onClientAbort);
-    reader.releaseLock();
-    writer.releaseLock();
+  };
+
+  let upstream: Response | undefined;
+  try {
+    upstream = await fetch(upstreamUrl, {
+      headers: {
+        Accept: "text/event-stream",
+        "Cache-Control": "no-store",
+        "x-api-token": token,
+      },
+      method: "GET",
+      signal: upstreamController.signal,
+    });
+    upstreamController.signal.throwIfAborted();
+  } catch (error: unknown) {
+    cleanup();
+    void upstream?.body?.cancel().catch(() => {
+      // A late response body may already have been aborted.
+    });
+    if (upstreamController.signal.reason === timeoutReason) {
+      return new Response(timeoutEvent(address), { headers: NO_STORE_HEADERS });
+    }
+
+    if (
+      upstreamController.signal.aborted ||
+      (error instanceof DOMException && error.name === "AbortError")
+    ) {
+      return new Response(null, { status: 499 });
+    }
+
+    const cause = describeFetchError(error);
+    console.error("OnlyDoge mempool watch fetch failed", {
+      cause,
+      upstreamUrl,
+    });
+
+    return jsonError("Unable to reach OnlyDoge mempool watch.", 502, {
+      cause,
+      upstreamUrl,
+    });
   }
+
+  if (!upstream.ok) {
+    cleanup();
+    void upstream.body?.cancel().catch(() => {
+      // The upstream error response body is no longer needed.
+    });
+    const message =
+      upstream.status === 409
+        ? "Another mempool watch session is already open for this API key."
+        : `OnlyDoge mempool watch failed with status ${upstream.status}.`;
+
+    console.error("OnlyDoge mempool watch upstream error", {
+      status: upstream.status,
+      upstreamUrl,
+    });
+
+    return jsonError(message, upstream.status === 409 ? 409 : 502, {
+      status: String(upstream.status),
+      upstreamUrl,
+    });
+  }
+
+  const upstreamBody = upstream.body;
+  if (!upstreamBody) {
+    cleanup();
+    return jsonError("OnlyDoge mempool watch returned an empty body.", 502);
+  }
+
+  return new Response(
+    proxyBody(
+      upstreamBody,
+      address,
+      upstreamController,
+      timeoutReason,
+      cleanup
+    ),
+    { headers: NO_STORE_HEADERS }
+  );
 };
 
 export const GET = async (request: Request): Promise<Response> => {
@@ -203,84 +335,15 @@ export const GET = async (request: Request): Promise<Response> => {
     minValueBase && minValueBase.length > 0 ? minValueBase : undefined
   );
 
-  const upstreamController = new AbortController();
-  const onClientAbort = () => {
-    upstreamController.abort();
-  };
-  request.signal.addEventListener("abort", onClientAbort, { once: true });
-
-  let upstream: Response;
-  try {
-    upstream = await fetch(upstreamUrl, {
-      headers: {
-        Accept: "text/event-stream",
-        "Cache-Control": "no-store",
-        "x-api-token": token,
-      },
-      method: "GET",
-      signal: upstreamController.signal,
-    });
-  } catch (error: unknown) {
-    request.signal.removeEventListener("abort", onClientAbort);
-
-    if (
-      upstreamController.signal.aborted ||
-      (error instanceof DOMException && error.name === "AbortError")
-    ) {
-      return new Response(null, { status: 499 });
-    }
-
-    const cause = describeFetchError(error);
-    console.error("OnlyDoge mempool watch fetch failed", {
-      cause,
-      upstreamUrl,
-    });
-
-    return jsonError("Unable to reach OnlyDoge mempool watch.", 502, {
-      cause,
-      upstreamUrl,
-    });
+  if (request.signal.aborted) {
+    return new Response(null, { status: 499 });
   }
 
-  if (!upstream.ok) {
-    request.signal.removeEventListener("abort", onClientAbort);
-    const message =
-      upstream.status === 409
-        ? "Another mempool watch session is already open for this API key."
-        : `OnlyDoge mempool watch failed with status ${upstream.status}.`;
-
-    console.error("OnlyDoge mempool watch upstream error", {
-      status: upstream.status,
-      upstreamUrl,
-    });
-
-    return jsonError(message, upstream.status === 409 ? 409 : 502, {
-      status: String(upstream.status),
-      upstreamUrl,
-    });
-  }
-
-  const upstreamBody = upstream.body;
-  if (!upstreamBody) {
-    request.signal.removeEventListener("abort", onClientAbort);
-    return jsonError("OnlyDoge mempool watch returned an empty body.", 502);
-  }
-
-  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-  void pipeUpstreamBody(
-    upstreamBody,
-    writable,
+  return await openUpstreamWatch({
     address,
     proxyDeadlineAt,
     request,
-    onClientAbort,
-    () => {
-      upstreamController.abort();
-    }
-  );
-
-  return new Response(readable, {
-    headers: NO_STORE_HEADERS,
-    status: 200,
+    token,
+    upstreamUrl,
   });
 };

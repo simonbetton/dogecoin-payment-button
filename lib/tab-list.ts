@@ -13,7 +13,12 @@ export const createTabListKeyDownHandler =
     values: readonly T[];
   }): ((event: React.KeyboardEvent<HTMLElement>) => void) =>
   (event) => {
-    const currentIndex = values.indexOf(value);
+    const tabList = event.currentTarget.closest('[role="tablist"]');
+    const focusedIndex = values.findIndex(
+      (candidate) => getTabElementId(candidate) === event.currentTarget.id
+    );
+    const currentIndex =
+      focusedIndex === -1 ? values.indexOf(value) : focusedIndex;
     if (currentIndex === -1) {
       return;
     }
@@ -54,10 +59,8 @@ export const createTabListKeyDownHandler =
     }
 
     onSelect(next);
-    queueMicrotask(() => {
-      const tab = document.querySelector<HTMLElement>(
-        `#${CSS.escape(getTabElementId(next))}`
-      );
-      tab?.focus();
-    });
+    const tab = tabList?.querySelector<HTMLElement>(
+      `#${CSS.escape(getTabElementId(next))}`
+    );
+    tab?.focus();
   };
